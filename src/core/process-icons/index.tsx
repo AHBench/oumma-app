@@ -1,0 +1,427 @@
+/**
+ * The exhaustive catalog of built-in process icons (24×24 SVG paths,
+ * stroke style — inherits currentColor). A process selects ONE key from
+ * this catalog; the left process menu renders it (positioned per RTL/LTR
+ * by the menu's logical layout). `bolt` is the default.
+ */
+export const PROCESS_ICONS = [
+  'bolt',
+  'bank',
+  'briefcase',
+  'user',
+  'users',
+  'document',
+  'file',
+  'chart',
+  'pie',
+  'shield',
+  'gear',
+  'home',
+  'globe',
+  'card',
+  'truck',
+  'heart',
+  'book',
+  'scale',
+  'calendar',
+  'chat',
+  'star',
+  'warning',
+  'cloud',
+  'lock',
+  'layers',
+  'target',
+  'inbox',
+] as const;
+
+export type SvgIconKey = (typeof PROCESS_ICONS)[number];
+export type EmojiIconKey = `e-${string}`;
+export type ProcessIconKey = SvgIconKey | EmojiIconKey;
+
+export const DEFAULT_PROCESS_ICON: ProcessIconKey = 'bolt';
+
+/** 24×24 path data for each catalog icon (stroke, no fill). */
+const PATHS: Record<ProcessIconKey, string[]> = {
+  bolt: ['M13 2 3 14h7l-1 8 10-12h-7l1-8z'],
+  bank: ['M3 21h18', 'M5 21V8l7-5 7 5v13', 'M9 21v-6h6v6', 'M9 11h.01M15 11h.01'],
+  briefcase: ['M4 8h16v12H4z', 'M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2', 'M4 13h16'],
+  user: ['M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', 'M4 21v-1a7 7 0 0 1 14 0v1'],
+  users: ['M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 'M2 21v-1a7 7 0 0 1 13-3', 'M16 4.5a3.5 3.5 0 0 1 0 7', 'M18 14a7 7 0 0 1 4 6v1'],
+  document: ['M6 2h9l5 5v15H6z', 'M15 2v5h5', 'M9 12h6', 'M9 16h6'],
+  file: ['M7 2h7l5 5v15H7z', 'M14 2v5h5', 'M10 13h4', 'M10 17h4'],
+  chart: ['M4 20V6', 'M4 20h16', 'M8 16v-5', 'M12 16V8', 'M16 16v-3'],
+  pie: ['M12 3a9 9 0 1 0 9 9h-9V3z', 'M14 2.5A9 9 0 0 1 21.5 10H14V2.5z'],
+  shield: ['M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z', 'M9 12l2 2 4-4'],
+  gear: ['M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z', 'M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1z'],
+  home: ['M3 11 12 3l9 8', 'M5 10v10h5v-6h4v6h5V10'],
+  globe: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M3 12h18', 'M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18z'],
+  card: ['M3 5h18v14H3z', 'M3 10h18', 'M7 15h4'],
+  truck: ['M1 7h13v10H1z', 'M14 10h5l3 3v4h-8', 'M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z', 'M18 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z'],
+  heart: ['M12 21C7 16.5 3 13.3 3 9.3 3 6.4 5.2 4 8 4c1.6 0 3.1.8 4 2 .9-1.2 2.4-2 4-2 2.8 0 5 2.4 5 5.3 0 4-4 7.2-9 11.7z'],
+  book: ['M4 4a2 2 0 0 1 2-2h14v18H6a2 2 0 0 0-2 2V4z', 'M4 20a2 2 0 0 1 2-2h14', 'M9 6h7'],
+  scale: ['M12 3v18', 'M8 21h8', 'M12 5 5 7l3 6a3.5 3.5 0 0 1-6 0l3-6', 'M12 5l7 2-3 6a3.5 3.5 0 0 0 6 0l-3-6'],
+  calendar: ['M4 5h16v16H4z', 'M4 9h16', 'M8 3v4', 'M16 3v4', 'M9 14h.01M15 14h.01M12 14h.01'],
+  chat: ['M21 12a8 8 0 0 1-8 8H4l2-3a8 8 0 1 1 15-5z', 'M9 11h.01M13 11h.01'],
+  star: ['M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8-6.1-3.5-6.1 3.5 1.4-6.8L2.2 9.1l6.9-.8L12 2z'],
+  warning: ['M12 3 2 20h20L12 3z', 'M12 9v5', 'M12 17h.01'],
+  cloud: ['M6 18a4.5 4.5 0 0 1-.4-9A6 6 0 0 1 17.5 8 4.5 4.5 0 0 1 17 17H6z'],
+  lock: ['M6 11h12v10H6z', 'M9 11V7a3 3 0 0 1 6 0v4', 'M12 15v2'],
+  layers: ['M12 2 2 8l10 6 10-6-10-6z', 'M2 12l10 6 10-6', 'M2 16l10 6 10-6'],
+  target: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10z', 'M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z'],
+  inbox: ['M4 4h16v16H4z', 'M4 14h5a3 3 0 0 0 6 0h5', 'M4 14l3-10h10l3 10'],
+};
+
+// Extended catalog: 174 emoji-based icons (slug key -> glyph + search labels).
+// Together with the 26 SVG icons above the user can choose from 200 icons.
+const EMOJI_ICONS: Array<{ key: EmojiIconKey; glyph: string; labels: string[] }> = [
+  { key: 'e-bank', glyph: '🏦', labels: ['bank', 'finance', 'money'] },
+  { key: 'e-government', glyph: '🏛️', labels: ['government', 'public', 'institute', 'civic'] },
+  { key: 'e-building', glyph: '🏢', labels: ['building', 'office', 'company', 'corporate'] },
+  { key: 'e-house', glyph: '🏠', labels: ['house', 'home', 'real estate', 'housing'] },
+  { key: 'e-hotel', glyph: '🏨', labels: ['hotel', 'stay', 'tourism'] },
+  { key: 'e-hospital', glyph: '🏥', labels: ['hospital', 'medical', 'health', 'clinic'] },
+  { key: 'e-school', glyph: '🏫', labels: ['school', 'education', 'training'] },
+  { key: 'e-shop', glyph: '🏪', labels: ['shop', 'store', 'retail'] },
+  { key: 'e-department-store', glyph: '🏬', labels: ['mall', 'commerce', 'department'] },
+  { key: 'e-construction', glyph: '🏗️', labels: ['construction', 'works', 'project', 'build'] },
+  { key: 'e-factory', glyph: '🏭', labels: ['factory', 'industrial', 'production'] },
+  { key: 'e-church', glyph: '⛪', labels: ['church', 'faith', 'community'] },
+  { key: 'e-mosque', glyph: '🕌', labels: ['mosque', 'islamic', 'community'] },
+  { key: 'e-person', glyph: '👤', labels: ['person', 'profile', 'user', 'client'] },
+  { key: 'e-people', glyph: '👥', labels: ['people', 'team', 'group', 'community'] },
+  { key: 'e-man-briefcase', glyph: '👨‍💼', labels: ['manager', 'business', 'executive'] },
+  { key: 'e-woman-briefcase', glyph: '👩‍💼', labels: ['manager', 'business', 'executive', 'female'] },
+  { key: 'e-developer', glyph: '🧑‍💻', labels: ['developer', 'it', 'tech', 'software'] },
+  { key: 'e-officer', glyph: '👮', labels: ['police', 'security', 'enforcement'] },
+  { key: 'e-doctor', glyph: '🧑‍⚕️', labels: ['doctor', 'medical', 'health'] },
+  { key: 'e-teacher', glyph: '🧑‍🏫', labels: ['teacher', 'education', 'training'] },
+  { key: 'e-judge', glyph: '🧑‍⚖️', labels: ['judge', 'legal', 'court', 'justice'] },
+  { key: 'e-farmer', glyph: '🧑‍🌾', labels: ['farmer', 'agriculture', 'rural'] },
+  { key: 'e-accountant', glyph: '🧑‍💼', labels: ['accountant', 'finance', 'audit'] },
+  { key: 'e-document', glyph: '📄', labels: ['document', 'paper', 'file', 'report'] },
+  { key: 'e-folder', glyph: '📁', labels: ['folder', 'files', 'archive'] },
+  { key: 'e-open-folder', glyph: '📂', labels: ['folder', 'open', 'files'] },
+  { key: 'e-chart', glyph: '📊', labels: ['chart', 'stats', 'analytics', 'data'] },
+  { key: 'e-rising-chart', glyph: '📈', labels: ['growth', 'up', 'trending', 'revenue'] },
+  { key: 'e-falling-chart', glyph: '📉', labels: ['decline', 'down', 'trending'] },
+  { key: 'e-clipboard', glyph: '📋', labels: ['clipboard', 'checklist', 'todo', 'list'] },
+  { key: 'e-memo', glyph: '📝', labels: ['memo', 'notes', 'write', 'edit'] },
+  { key: 'e-calendar', glyph: '📅', labels: ['calendar', 'date', 'schedule'] },
+  { key: 'e-tear-off-calendar', glyph: '📆', labels: ['calendar', 'deadline', 'date'] },
+  { key: 'e-card-index', glyph: '📇', labels: ['directory', 'index', 'records'] },
+  { key: 'e-pushpin', glyph: '📌', labels: ['pin', 'mark', 'flag'] },
+  { key: 'e-paperclip', glyph: '📎', labels: ['attachment', 'clip', 'link'] },
+  { key: 'e-pencil', glyph: '✏️', labels: ['pencil', 'edit', 'draft', 'write'] },
+  { key: 'e-pen', glyph: '🖊️', labels: ['pen', 'sign', 'signature', 'write'] },
+  { key: 'e-disk', glyph: '💾', labels: ['disk', 'save', 'backup', 'storage'] },
+  { key: 'e-printer', glyph: '🖨️', labels: ['printer', 'print', 'printout'] },
+  { key: 'e-camera', glyph: '📷', labels: ['camera', 'photo', 'image', 'capture'] },
+  { key: 'e-movie', glyph: '🎥', labels: ['video', 'movie', 'media', 'film'] },
+  { key: 'e-telephone', glyph: '📞', labels: ['phone', 'call', 'contact', 'telephone'] },
+  { key: 'e-mail', glyph: '📧', labels: ['mail', 'email', 'message', 'post'] },
+  { key: 'e-inbox-tray', glyph: '📥', labels: ['inbox', 'received', 'incoming'] },
+  { key: 'e-outbox-tray', glyph: '📤', labels: ['outbox', 'sent', 'outgoing'] },
+  { key: 'e-package', glyph: '📦', labels: ['package', 'box', 'parcel', 'shipping', 'order'] },
+  { key: 'e-postal-horn', glyph: '📯', labels: ['announcement', 'news', 'alert'] },
+  { key: 'e-megaphone', glyph: '📢', labels: ['megaphone', 'announce', 'marketing'] },
+  { key: 'e-loudspeaker', glyph: '📣', labels: ['speaker', 'announce', 'broadcast'] },
+  { key: 'e-label', glyph: '🏷️', labels: ['label', 'tag', 'badge'] },
+  { key: 'e-ticket', glyph: '🎫', labels: ['ticket', 'voucher', 'pass'] },
+  { key: 'e-admission-tickets', glyph: '🎟️', labels: ['tickets', 'admission', 'event'] },
+  { key: 'e-money-bag', glyph: '💰', labels: ['money', 'cash', 'fund', 'savings'] },
+  { key: 'e-bill', glyph: '🧾', labels: ['bill', 'invoice', 'receipt', 'statement'] },
+  { key: 'e-credit-card', glyph: '💳', labels: ['card', 'credit', 'payment', 'bank card'] },
+  { key: 'e-dollar', glyph: '💵', labels: ['dollar', 'currency', 'cash', 'usd'] },
+  { key: 'e-euro', glyph: '💶', labels: ['euro', 'currency', 'eur'] },
+  { key: 'e-yen', glyph: '💴', labels: ['yen', 'currency', 'jpy'] },
+  { key: 'e-pound', glyph: '💷', labels: ['pound', 'currency', 'gbp'] },
+  { key: 'e-money-with-wings', glyph: '💸', labels: ['spending', 'expense', 'cost', 'transfer'] },
+  { key: 'e-coin', glyph: '🪙', labels: ['coin', 'currency', 'cash'] },
+  { key: 'e-gem', glyph: '💎', labels: ['gem', 'premium', 'diamond', 'quality'] },
+  { key: 'e-weight', glyph: '⚖️', labels: ['scales', 'balance', 'legal', 'weighing'] },
+  { key: 'e-watch', glyph: '⌚', labels: ['watch', 'time', 'clock'] },
+  { key: 'e-alarm-clock', glyph: '⏰', labels: ['alarm', 'time', 'reminder', 'deadline'] },
+  { key: 'e-stopwatch', glyph: '⏱️', labels: ['stopwatch', 'timing', 'duration'] },
+  { key: 'e-hourglass', glyph: '⏳', labels: ['hourglass', 'waiting', 'pending', 'time'] },
+  { key: 'e-globe', glyph: '🌍', labels: ['world', 'global', 'international', 'earth'] },
+  { key: 'e-globe-americas', glyph: '🌎', labels: ['americas', 'global', 'international'] },
+  { key: 'e-globe-europe', glyph: '🌐', labels: ['europe', 'online', 'network', 'global'] },
+  { key: 'e-seedling', glyph: '🌱', labels: ['seedling', 'growth', 'start', 'young'] },
+  { key: 'e-evergreen', glyph: '🌲', labels: ['tree', 'forest', 'environment', 'green'] },
+  { key: 'e-deciduous-tree', glyph: '🌳', labels: ['tree', 'nature', 'park'] },
+  { key: 'e-palm-tree', glyph: '🌴', labels: ['palm', 'tropical', 'vacation'] },
+  { key: 'e-rose', glyph: '🌹', labels: ['rose', 'flower', 'gift'] },
+  { key: 'e-sunflower', glyph: '🌻', labels: ['sunflower', 'solar', 'energy'] },
+  { key: 'e-clover', glyph: '🍀', labels: ['clover', 'lucky', 'four leaf'] },
+  { key: 'e-ear-of-rice', glyph: '🌾', labels: ['wheat', 'grain', 'harvest', 'agriculture'] },
+  { key: 'e-apple', glyph: '🍎', labels: ['apple', 'food', 'health', 'fruit'] },
+  { key: 'e-bread', glyph: '🍞', labels: ['bread', 'food', 'baker'] },
+  { key: 'e-milk', glyph: '🥛', labels: ['milk', 'drink', 'dairy'] },
+  { key: 'e-coffee', glyph: '☕', labels: ['coffee', 'drink', 'cafe'] },
+  { key: 'e-tea', glyph: '🍵', labels: ['tea', 'drink'] },
+  { key: 'e-cow', glyph: '🐄', labels: ['cow', 'dairy', 'livestock', 'cattle'] },
+  { key: 'e-pig', glyph: '🐖', labels: ['pig', 'livestock', 'saving'] },
+  { key: 'e-sheep', glyph: '🐑', labels: ['sheep', 'wool', 'livestock'] },
+  { key: 'e-horse', glyph: '🐎', labels: ['horse', 'equestrian', 'stable'] },
+  { key: 'e-bee', glyph: '🐝', labels: ['bee', 'honey', 'pollen'] },
+  { key: 'e-fish', glyph: '🐟', labels: ['fish', 'seafood', 'fishing'] },
+  { key: 'e-bird', glyph: '🦅', labels: ['eagle', 'bird', 'sky', 'freedom'] },
+  { key: 'e-owl', glyph: '🦉', labels: ['owl', 'wisdom', 'watch'] },
+  { key: 'e-car', glyph: '🚗', labels: ['car', 'auto', 'vehicle', 'automotive'] },
+  { key: 'e-taxi', glyph: '🚕', labels: ['taxi', 'ride', 'transport'] },
+  { key: 'e-bus', glyph: '🚌', labels: ['bus', 'transit', 'transport'] },
+  { key: 'e-ambulance', glyph: '🚑', labels: ['ambulance', 'emergency', 'medical'] },
+  { key: 'e-fire-truck', glyph: '🚒', labels: ['fire', 'emergency', 'rescue'] },
+  { key: 'e-police-car', glyph: '🚓', labels: ['police', 'security', 'patrol'] },
+  { key: 'e-truck', glyph: '🚚', labels: ['truck', 'delivery', 'logistics', 'freight'] },
+  { key: 'e-tractor', glyph: '🚜', labels: ['tractor', 'farm', 'agriculture'] },
+  { key: 'e-bicycle', glyph: '🚲', labels: ['bicycle', 'bike', 'cycling'] },
+  { key: 'e-boat', glyph: '⛵', labels: ['boat', 'sailing', 'yacht', 'marine'] },
+  { key: 'e-ship', glyph: '🚢', labels: ['ship', 'cargo', 'shipping', 'sea'] },
+  { key: 'e-airplane', glyph: '✈️', labels: ['plane', 'flight', 'travel', 'airline'] },
+  { key: 'e-helicopter', glyph: '🚁', labels: ['helicopter', 'air', 'rescue'] },
+  { key: 'e-rocket', glyph: '🚀', labels: ['rocket', 'launch', 'start', 'space'] },
+  { key: 'e-satellite', glyph: '🛰️', labels: ['satellite', 'space', 'communication'] },
+  { key: 'e-heart', glyph: '❤️', labels: ['heart', 'love', 'care', 'life'] },
+  { key: 'e-heartbeat', glyph: '💓', labels: ['heartbeat', 'pulse', 'vital', 'health'] },
+  { key: 'e-umbrella', glyph: '⛑️', labels: ['helmet', 'safety', 'protection'] },
+  { key: 'e-first-aid', glyph: '🩹', labels: ['bandage', 'first aid', 'care'] },
+  { key: 'e-injection', glyph: '💉', labels: ['vaccine', 'injection', 'medical', 'health'] },
+  { key: 'e-pills', glyph: '💊', labels: ['pills', 'medicine', 'pharmacy', 'drug'] },
+  { key: 'e-stethoscope', glyph: '🩺', labels: ['stethoscope', 'medical', 'doctor', 'health'] },
+  { key: 'e-brain', glyph: '🧠', labels: ['brain', 'intelligence', 'knowledge', 'ai'] },
+  { key: 'e-light-bulb', glyph: '💡', labels: ['idea', 'light', 'innovation', 'insight'] },
+  { key: 'e-flashlight', glyph: '🔦', labels: ['flashlight', 'search', 'find', 'inspect'] },
+  { key: 'e-magnifier', glyph: '🔍', labels: ['search', 'find', 'inspect', 'zoom'] },
+  { key: 'e-magnifier-right', glyph: '🔎', labels: ['search', 'find', 'details'] },
+  { key: 'e-computer', glyph: '💻', labels: ['laptop', 'computer', 'system', 'it'] },
+  { key: 'e-desktop', glyph: '🖥️', labels: ['desktop', 'monitor', 'system'] },
+  { key: 'e-mobile', glyph: '📱', labels: ['mobile', 'phone', 'app', 'smartphone'] },
+  { key: 'e-keyboard', glyph: '⌨️', labels: ['keyboard', 'input', 'typing'] },
+  { key: 'e-mouse', glyph: '🖱️', labels: ['mouse', 'pointer', 'input'] },
+  { key: 'e-antenna', glyph: '📡', labels: ['antenna', 'signal', 'broadcast', 'radio'] },
+  { key: 'e-microscope', glyph: '🔬', labels: ['microscope', 'lab', 'science', 'analysis'] },
+  { key: 'e-telescope', glyph: '🔭', labels: ['telescope', 'vision', 'outlook'] },
+  { key: 'e-test-tube', glyph: '🧪', labels: ['lab', 'science', 'experiment', 'test'] },
+  { key: 'e-dna', glyph: '🧬', labels: ['dna', 'genetics', 'biotech', 'bio'] },
+  { key: 'e-battery', glyph: '🔋', labels: ['battery', 'power', 'energy', 'charge'] },
+  { key: 'e-plug', glyph: '🔌', labels: ['plug', 'connect', 'power', 'integration'] },
+  { key: 'e-electricity', glyph: '⚡', labels: ['electric', 'power', 'energy', 'fast'] },
+  { key: 'e-gasoline', glyph: '⛽', labels: ['fuel', 'gasoline', 'energy', 'petrol'] },
+  { key: 'e-bolt-sign', glyph: '🔶', labels: ['diamond sign', 'priority', 'highlight'] },
+  { key: 'e-key', glyph: '🔑', labels: ['key', 'access', 'login', 'security'] },
+  { key: 'e-locked', glyph: '🔒', labels: ['locked', 'secure', 'private', 'confidential'] },
+  { key: 'e-unlocked', glyph: '🔓', labels: ['unlocked', 'open', 'access'] },
+  { key: 'e-bell', glyph: '🔔', labels: ['bell', 'notification', 'alert', 'alarm'] },
+  { key: 'e-speaker-off', glyph: '🔕', labels: ['mute', 'silent', 'quiet'] },
+  { key: 'e-speech-balloon', glyph: '💬', labels: ['chat', 'speech', 'comment', 'message'] },
+  { key: 'e-sparkles', glyph: '✨', labels: ['sparkles', 'special', 'premium', 'new'] },
+  { key: 'e-crossed-flags', glyph: '🎌', labels: ['flags', 'festival', 'national'] },
+  { key: 'e-checkered-flag', glyph: '🏁', labels: ['finish', 'complete', 'race', 'done'] },
+  { key: 'e-trophy', glyph: '🏆', labels: ['trophy', 'winner', 'award', 'champion'] },
+  { key: 'e-medal', glyph: '🏅', labels: ['medal', 'award', 'rank', 'honor'] },
+  { key: 'e-first-place', glyph: '🥇', labels: ['gold', 'first place', 'top', 'rank'] },
+  { key: 'e-cap', glyph: '🎓', labels: ['graduation', 'degree', 'education', 'academic'] },
+  { key: 'e-art', glyph: '🎨', labels: ['art', 'design', 'creative', 'palette'] },
+  { key: 'e-music', glyph: '🎵', labels: ['music', 'sound', 'audio'] },
+  { key: 'e-film', glyph: '🎬', labels: ['film', 'cinema', 'media', 'clapper'] },
+  { key: 'e-game', glyph: '🎮', labels: ['game', 'play', 'gaming', 'entertainment'] },
+  { key: 'e-dice', glyph: '🎲', labels: ['dice', 'random', 'chance', 'gamble'] },
+  { key: 'e-target', glyph: '🎯', labels: ['target', 'goal', 'aim', 'direct hit'] },
+  { key: 'e-soccer', glyph: '⚽', labels: ['soccer', 'football', 'sport', 'team'] },
+  { key: 'e-basketball', glyph: '🏀', labels: ['basketball', 'sport', 'team'] },
+  { key: 'e-golf', glyph: '⛳', labels: ['golf', 'sport', 'course'] },
+  { key: 'e-swimming', glyph: '🏊', labels: ['swimming', 'pool', 'sport'] },
+  { key: 'e-runner', glyph: '🏃', labels: ['runner', 'run', 'sport', 'fitness'] },
+  { key: 'e-wedding', glyph: '💍', labels: ['ring', 'wedding', 'marriage'] },
+  { key: 'e-gift', glyph: '🎁', labels: ['gift', 'present', 'bonus', 'reward'] },
+  { key: 'e-balloon', glyph: '🎈', labels: ['balloon', 'celebration', 'party'] },
+  { key: 'e-party', glyph: '🎉', labels: ['party', 'celebration', 'confetti'] },
+  { key: 'e-recycle', glyph: '♻️', labels: ['recycle', 'environment', 'sustainable', 'green'] },
+  { key: 'e-warning', glyph: '⚠️', labels: ['warning', 'caution', 'alert', 'danger'] },
+  { key: 'e-no-entry', glyph: '🚫', labels: ['forbidden', 'banned', 'no', 'restricted'] },
+  { key: 'e-white-check', glyph: '✅', labels: ['ok', 'check', 'approved', 'done', 'yes'] },
+  { key: 'e-cross', glyph: '❌', labels: ['no', 'wrong', 'failed', 'reject', 'cross'] },
+  { key: 'e-question', glyph: '❓', labels: ['question', 'help', 'unknown', 'faq'] },
+  { key: 'e-exclamation', glyph: '❗', labels: ['important', 'urgent', 'attention', 'exclamation'] },
+  { key: 'e-diamond', glyph: '💠', labels: ['diamond', 'pattern', 'special', 'shape'] },
+  { key: 'e-dots', glyph: '🔵', labels: ['blue dot', 'status', 'point'] },
+  { key: 'e-map', glyph: '🗺️', labels: ['map', 'location', 'geography', 'territory'] },
+  { key: 'e-pin', glyph: '📍', labels: ['pin', 'location', 'place', 'geolocation'] },
+  { key: 'e-compass', glyph: '🧭', labels: ['compass', 'direction', 'navigation'] },
+  { key: 'e-lantern', glyph: '🏮', labels: ['lantern', 'festival', 'light', 'decoration'] },
+  { key: 'e-fireworks', glyph: '🎆', labels: ['fireworks', 'celebration', 'event'] },
+  { key: 'e-moon', glyph: '🌙', labels: ['moon', 'night', 'crescent', 'ramadan'] },
+  { key: 'e-sun', glyph: '☀️', labels: ['sun', 'day', 'solar', 'weather'] },
+  { key: 'e-star', glyph: '⭐', labels: ['star', 'rating', 'favorite', 'featured'] },
+  { key: 'e-fire', glyph: '🔥', labels: ['fire', 'hot', 'popular', 'trending'] },
+  { key: 'e-droplet', glyph: '💧', labels: ['water', 'droplet', 'liquid'] },
+  { key: 'e-wave', glyph: '🌊', labels: ['wave', 'sea', 'ocean', 'water'] },
+  { key: 'e-snowflake', glyph: '❄️', labels: ['snow', 'cold', 'winter', 'cool'] },
+  { key: 'e-cloud', glyph: '☁️', labels: ['cloud', 'weather', 'sky', 'hosting'] },
+  { key: 'e-rainbow', glyph: '🌈', labels: ['rainbow', 'diversity', 'color'] },
+  { key: 'e-magnet', glyph: '🧲', labels: ['magnet', 'attract', 'pull', 'join'] },
+  { key: 'e-link', glyph: '🔗', labels: ['link', 'chain', 'connect', 'url'] },
+  { key: 'e-tools', glyph: '🛠️', labels: ['tools', 'maintenance', 'repair', 'settings'] },
+  { key: 'e-wrench', glyph: '🔧', labels: ['wrench', 'fix', 'repair', 'config'] },
+  { key: 'e-hammer', glyph: '🔨', labels: ['hammer', 'build', 'work', 'strike'] },
+  { key: 'e-gears', glyph: '⚙️', labels: ['gears', 'settings', 'mechanism', 'system'] },
+  { key: 'e-axe', glyph: '🪓', labels: ['axe', 'cut', 'tool', 'chop'] },
+  { key: 'e-broom', glyph: '🧹', labels: ['broom', 'clean', 'sweep', 'tidy'] },
+  { key: 'e-mop', glyph: '🧽', labels: ['sponge', 'clean', 'wipe'] },
+  { key: 'e-bag', glyph: '👜', labels: ['bag', 'handbag', 'carrying', 'personal'] },
+  { key: 'e-backpack', glyph: '🎒', labels: ['backpack', 'student', 'travel', 'carry'] },
+  { key: 'e-luggage', glyph: '🧳', labels: ['suitcase', 'travel', 'luggage', 'trip'] },
+  { key: 'e-umbrella-rain', glyph: '☂️', labels: ['umbrella', 'rain', 'protection', 'insurance'] },
+  { key: 'e-hat', glyph: '🎩', labels: ['hat', 'style', 'fashion', 'formal'] },
+  { key: 'e-sunglasses', glyph: '🕶️', labels: ['sunglasses', 'style', 'fashion', 'cool'] },
+  { key: 'e-glasses', glyph: '👓', labels: ['glasses', 'vision', 'optics', 'sight'] },
+  { key: 'e-book', glyph: '📚', labels: ['books', 'library', 'knowledge', 'reading'] },
+  { key: 'e-open-book', glyph: '📖', labels: ['open book', 'read', 'manual', 'guide'] },
+  { key: 'e-notebook', glyph: '📓', labels: ['notebook', 'journal', 'notes', 'log'] },
+  { key: 'e-ledger', glyph: '📒', labels: ['ledger', 'accounting', 'records', 'book'] },
+  { key: 'e-diary-lock', glyph: '📔', labels: ['diary', 'private', 'journal'] },
+  { key: 'e-green-book', glyph: '📗', labels: ['green book', 'guide', 'manual'] },
+  { key: 'e-blue-book', glyph: '📘', labels: ['blue book', 'report', 'manual'] },
+  { key: 'e-orange-book', glyph: '📙', labels: ['orange book', 'catalog', 'manual'] },
+  { key: 'e-red-book', glyph: '📕', labels: ['red book', 'important', 'manual'] },
+  { key: 'e-envelope', glyph: '✉️', labels: ['envelope', 'mail', 'letter', 'post'] },
+  { key: 'e-dove', glyph: '🕊️', labels: ['dove', 'peace', 'message', 'release'] },
+  { key: 'e-scroll', glyph: '📜', labels: ['scroll', 'contract', 'certificate', 'document'] },
+  { key: 'e-shaking-hands', glyph: '🤝', labels: ['handshake', 'agreement', 'deal', 'partner'] },
+  { key: 'e-thumbs-up', glyph: '👍', labels: ['approve', 'like', 'agree', 'ok'] },
+  { key: 'e-thumbs-down', glyph: '👎', labels: ['reject', 'dislike', 'disagree', 'deny'] },
+  { key: 'e-clap', glyph: '👏', labels: ['clap', 'applause', 'praise'] },
+  { key: 'e-muscle', glyph: '💪', labels: ['strength', 'power', 'effort', 'support'] },
+  { key: 'e-eyes', glyph: '👀', labels: ['eyes', 'watch', 'monitor', 'review'] },
+  { key: 'e-thinking', glyph: '🤔', labels: ['thinking', 'review', 'consider', 'analysis'] },
+  { key: 'e-mind', glyph: '💭', labels: ['thought', 'idea', 'bubble', 'concern'] },
+  { key: 'e-crystal-ball', glyph: '🔮', labels: ['crystal ball', 'forecast', 'prediction', 'mystic'] },
+  { key: 'e-puzzle', glyph: '🧩', labels: ['puzzle', 'solution', 'piece', 'assembly'] },
+  { key: 'e-shield-check', glyph: '🛡️', labels: ['shield', 'security', 'protection', 'defense'] },
+  { key: 'e-dog', glyph: '🐕', labels: ['dog', 'pet', 'loyalty'] },
+  { key: 'e-cat', glyph: '🐈', labels: ['cat', 'pet', 'independent'] },
+  { key: 'e-elephant', glyph: '🐘', labels: ['elephant', 'memory', 'strength'] },
+  { key: 'e-fox', glyph: '🦊', labels: ['fox', 'clever', 'cunning', 'smart'] },
+  { key: 'e-panda', glyph: '🐼', labels: ['panda', 'rare', 'precious'] },
+  { key: 'e-camel', glyph: '🐫', labels: ['camel', 'desert', 'caravan', 'endurance'] },
+  { key: 'e-butterfly', glyph: '🦋', labels: ['butterfly', 'change', 'transformation'] },
+  { key: 'e-turtle', glyph: '🐢', labels: ['turtle', 'slow', 'steady', 'longevity'] },
+  { key: 'e-zombie', glyph: '🧟', labels: ['zombie', 'stuck', 'inactive', 'frozen'] },
+  { key: 'e-robot', glyph: '🤖', labels: ['robot', 'automation', 'bot', 'ai'] },
+  { key: 'e-ghost', glyph: '👻', labels: ['ghost', 'hidden', 'invisible', 'phantom'] },
+  { key: 'e-alien', glyph: '👽', labels: ['alien', 'other', 'external', 'unknown'] },
+  { key: 'e-angel', glyph: '👼', labels: ['angel', 'pure', 'blessing', 'care'] },
+  { key: 'e-clown', glyph: '🤡', labels: ['clown', 'fun', 'show', 'circus'] },
+  { key: 'e-santa', glyph: '🎅', labels: ['gift', 'season', 'special', 'festival'] },
+  { key: 'e-mosque-star', glyph: '☪️', labels: ['crescent star', 'islamic', 'faith'] },
+  { key: 'e-star-david', glyph: '✡️', labels: ['star of david', 'faith', 'jewish'] },
+  { key: 'e-cross-mark', glyph: '✝️', labels: ['cross', 'christian', 'faith'] },
+  { key: 'e-om', glyph: '🕉️', labels: ['om', 'spiritual', 'faith'] },
+  { key: 'e-wind', glyph: '🌬️', labels: ['wind', 'breeze', 'air', 'change'] },
+  { key: 'e-umbrella-sun', glyph: '⛅', labels: ['partly cloudy', 'weather', 'mixed'] },
+  { key: 'e-rain', glyph: '🌧️', labels: ['rain', 'weather', 'storm', 'monsoon'] },
+  { key: 'e-lightning', glyph: '⛈️', labels: ['storm', 'thunder', 'electric', 'power'] },
+  { key: 'e-volcano', glyph: '🌋', labels: ['volcano', 'eruption', 'crisis', 'power'] },
+  { key: 'e-mountain', glyph: '🏔️', labels: ['mountain', 'peak', 'highland', 'challenge'] },
+  { key: 'e-camping', glyph: '🏕️', labels: ['camping', 'outdoor', 'travel', 'tent'] },
+  { key: 'e-national-park', glyph: '🏞️', labels: ['park', 'nature', 'landscape', 'reserve'] },
+  { key: 'e-stadium', glyph: '🏟️', labels: ['stadium', 'sport', 'arena', 'event'] },
+  { key: 'e-spirited-away', glyph: '⛩️', labels: ['torii', 'shrine', 'temple', 'faith'] },
+  { key: 'e-ferris-wheel', glyph: '🎡', labels: ['ferris wheel', 'amusement', 'fair', 'fun'] },
+  { key: 'e-carousel', glyph: '🎠', labels: ['carousel', 'carnival', 'fun', 'fair'] },
+  { key: 'e-playground', glyph: '🛝', labels: ['playground', 'kids', 'fun', 'park'] },
+  { key: 'e-bell-hotel', glyph: '🛎️', labels: ['service bell', 'hotel', 'service', 'concierge'] },
+];
+
+// Full catalog: 26 SVG keys + 174 emoji keys = 200 selectable icons.
+const EMOJI_KEYS: EmojiIconKey[] = EMOJI_ICONS.map((e) => e.key);
+const ALL_KEYS: ProcessIconKey[] = [...(PROCESS_ICONS as readonly SvgIconKey[]), ...EMOJI_KEYS];
+
+// Search metadata for every key (label + key for keyword matching).
+const ICON_LABELS: Record<string, string> = {
+  bolt: 'bolt lightning default',
+  bank: 'bank finance money',
+  briefcase: 'briefcase work business',
+  user: 'user person profile client',
+  users: 'users team group people',
+  document: 'document paper file report',
+  file: 'file page document',
+  chart: 'chart stats analytics bars',
+  pie: 'pie chart percentage share',
+  shield: 'shield security protection safety',
+  gear: 'gear settings configuration options',
+  home: 'home house main',
+  globe: 'globe world global network',
+  card: 'card payment bank credit',
+  truck: 'truck delivery logistics freight',
+  heart: 'heart love care life',
+  book: 'book library knowledge reading',
+  scale: 'scales balance legal justice',
+  calendar: 'calendar date schedule',
+  chat: 'chat speech comment message',
+  star: 'star rating favorite featured',
+  warning: 'warning caution alert danger',
+  cloud: 'cloud weather sky hosting',
+  lock: 'lock secure private confidential',
+  layers: 'layers stack structure',
+  target: 'target goal aim',
+  inbox: 'inbox received incoming tray',
+  ...Object.fromEntries(EMOJI_ICONS.map((e) => [e.key, e.labels.join(' ')])),
+};
+
+export function isProcessIconKey(key: string | null | undefined): key is ProcessIconKey {
+  return !!key && (ALL_KEYS as readonly string[]).includes(key);
+}
+
+/** All 200 selectable icon keys (SVG catalog + emoji catalog). */
+export const ALL_PROCESS_ICONS = ALL_KEYS;
+
+/** Search label for an icon key (matched against the picker's keyword box). */
+export function iconSearchLabel(key: string): string {
+return `${key} ${ICON_LABELS[key] ?? ''}`;
+}
+
+/** The emoji glyph for a key (null for SVG icons, which render as paths). */
+export function emojiGlyph(key: string): string | null {
+  const e = EMOJI_ICONS.find((x) => x.key === key);
+  return e ? e.glyph : null;
+}
+
+/**
+ * Renders a catalog icon by key. Unknown/empty keys fall back to the
+ * default. Stroke style: the paths inherit currentColor.
+ */
+export function ProcessIcon({
+  iconKey,
+  className,
+}: {
+  iconKey?: string | null;
+  className?: string;
+}) {
+  const key = isProcessIconKey(iconKey) ? iconKey : DEFAULT_PROCESS_ICON;
+  const glyph = emojiGlyph(key);
+  if (glyph) {
+    return (
+      <span className={className ?? 'text-xl leading-none'} aria-hidden="true">
+        {glyph}
+      </span>
+    );
+  }
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className ?? 'h-5 w-5'}
+      aria-hidden="true"
+    >
+      {PATHS[key].map((d, i) => (
+        <path key={i} d={d} />
+      ))}
+    </svg>
+  );
+}

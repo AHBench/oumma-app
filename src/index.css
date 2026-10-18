@@ -1,0 +1,252 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   Clinical Teal — medical palette (Tailwind tokens)
+   Primary: clinical teal/cyan · Secondary: calm sage
+   Neutrals: cool slate with a faint blue-green tint
+   ============================================================ */
+@theme {
+  /* Primary — clinical teal (trust / hygiene) */
+  --color-brand-50: #f0f7f8;
+  --color-brand-100: #dceef1;
+  --color-brand-200: #b5dce3;
+  --color-brand-300: #7ec2cd;
+  --color-brand-400: #3fa3b5;
+  --color-brand-500: #15839b;
+  --color-brand-600: #0e7490;
+  --color-brand-700: #0c5d74;
+  --color-brand-800: #0b4a5c;
+  --color-brand-900: #0a3d4c;
+  --color-brand-950: #062630;
+
+  /* Secondary — calm sage (health / confirmed) */
+  --color-mint-400: #7fb39f;
+  --color-mint-500: #4c7c6f;
+  --color-mint-600: #3d6a5e;
+
+  /* Neutrals — cool slate */
+  --color-ink-50: #f5f8f8;
+  --color-ink-100: #edf2f2;
+  --color-ink-200: #dde6e6;
+  --color-ink-300: #c2d0d0;
+  --color-ink-400: #8fa5a8;
+  --color-ink-500: #5e7478;
+  --color-ink-600: #46606b;
+  --color-ink-700: #324b54;
+  --color-ink-800: #223740;
+  --color-ink-900: #16262d;
+  --color-ink-950: #0b171d;
+
+  /* Status (medical) */
+  --color-danger-400: #f0918a;
+  --color-danger-500: #c0392b;
+  --color-danger-600: #a93226;
+  --color-warn-400: #e5b45b;
+  --color-warn-500: #b45309;
+  --color-success-400: #4caf72;
+  --color-success-500: #1e7e44;
+  --color-info-400: #60a5fa;
+  --color-info-500: #1d4ed8;
+}
+
+/* ============================================================
+   Density system — Dense (default) / Medium / Large.
+   <html data-density="dense|medium|large"> flips every value;
+   components consume the tokens (text-(--app-fs-base), h-(--app-row-h), …).
+   ============================================================ */
+:root {
+  --app-fs-small: 10px;
+  --app-fs-base: 12px;
+  --app-fs-body: 13px; /* dialog/form body — never below 13px (readability) */
+  --app-fs-title: 14px;
+  --app-row-h: 28px;
+  --app-field-h: 28px;
+  --app-icon-btn: 28px;
+  --app-pad-page: 6px;
+  --app-pad-cell: 8px;
+  --app-gap: 8px;
+  --app-radius: 4px;
+  --app-avatar: 24px;
+  --app-modal-pad: 12px;
+}
+
+[data-density="medium"] {
+  --app-fs-small: 11px;
+  --app-fs-base: 13px;
+  --app-fs-body: 14px;
+  --app-fs-title: 15px;
+  --app-row-h: 36px;
+  --app-field-h: 34px;
+  --app-icon-btn: 34px;
+  --app-pad-page: 10px;
+  --app-pad-cell: 10px;
+  --app-gap: 12px;
+  --app-radius: 6px;
+  --app-avatar: 32px;
+  --app-modal-pad: 16px;
+}
+
+[data-density="large"] {
+  --app-fs-small: 12px;
+  --app-fs-base: 14px;
+  --app-fs-body: 15px;
+  --app-fs-title: 16px;
+  --app-row-h: 44px;
+  --app-field-h: 40px;
+  --app-icon-btn: 40px;
+  --app-pad-page: 16px;
+  --app-pad-cell: 12px;
+  --app-gap: 16px;
+  --app-radius: 10px;
+  --app-avatar: 40px;
+  --app-modal-pad: 24px;
+}
+
+/* ============================================================
+   HeroUI theme variables — Clinical Teal override.
+   Unlayered rules win over HeroUI's @layer(theme) defaults.
+   Dark mode: the app toggles `.dark` on <html> (ThemeProvider),
+   which is exactly HeroUI's dark selector.
+   ============================================================ */
+:root {
+  --accent: #0e7490;
+  --accent-foreground: #ffffff;
+  --success: #1e7e44;
+  --success-foreground: #ffffff;
+  --warning: #b45309;
+  --warning-foreground: #ffffff;
+  --danger: #c0392b;
+  --danger-foreground: #ffffff;
+
+  --background: #f5f8f8;
+  --foreground: #1f2e33;
+  --surface: #ffffff;
+  --surface-foreground: #1f2e33;
+  --surface-secondary: #edf2f2;
+  --surface-tertiary: #e3ebea;
+  --overlay: #ffffff;
+  --overlay-foreground: #1f2e33;
+  --muted: #5e7478;
+  --border: rgba(22, 38, 45, 0.1);
+  --separator: #dde6e6;
+  --focus: #0e7490;
+  --link: #0e7490;
+
+  --radius: 0.375rem; /* 6px — compact corporate feel */
+  --field-radius: 0.5rem;
+}
+
+.dark {
+  --accent: #2fb6ce;
+  --accent-foreground: #062630;
+  --success: #4ade80;
+  --success-foreground: #0b171d;
+  --warning: #fbbf24;
+  --warning-foreground: #0b171d;
+  --danger: #f87171;
+  --danger-foreground: #0b171d;
+
+  --background: #0b171d;
+  --foreground: #e4ecee;
+  --surface: #12262c;
+  --surface-foreground: #e4ecee;
+  --surface-secondary: #16303a;
+  --surface-tertiary: #1b3a45;
+  --overlay: #12262c;
+  --overlay-foreground: #e4ecee;
+  --muted: #8ba3a8;
+  --border: rgba(228, 236, 238, 0.1);
+  --separator: #1e3a42;
+  --focus: #2fb6ce;
+  --link: #2fb6ce;
+}
+
+/* ============================================================
+   App baseline (corporate compact, density-aware)
+   ============================================================ */
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-size: var(--app-fs-base);
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  @apply bg-ink-50 text-ink-900 dark:bg-brand-950 dark:text-ink-50;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+input,
+select,
+textarea {
+  font-size: var(--app-fs-base);
+}
+
+* {
+  scrollbar-width: thin;
+}
+
+/* ============================================================
+   HeroUI component metrics — compact + density-aware overrides
+   (unlayered → wins over HeroUI's layered component CSS)
+   ============================================================ */
+.button {
+  height: var(--app-field-h);
+  font-size: var(--app-fs-base);
+  border-radius: var(--app-radius);
+  padding-inline: 12px;
+}
+.button--icon-only {
+  width: var(--app-icon-btn);
+}
+.button--sm {
+  height: calc(var(--app-field-h) - 4px);
+  font-size: var(--app-fs-small);
+  padding-inline: 8px;
+}
+
+.input {
+  height: var(--app-field-h);
+  font-size: var(--app-fs-base);
+  border-radius: var(--app-radius);
+}
+
+.chip {
+  font-size: var(--app-fs-small);
+  border-radius: var(--app-radius);
+}
+
+.alert {
+  border-radius: var(--app-radius);
+}
+
+.modal__dialog {
+  border-radius: var(--app-radius);
+  padding: var(--app-modal-pad);
+}
+.modal__heading {
+  font-size: var(--app-fs-title);
+}
+.modal__body {
+  font-size: var(--app-fs-body);
+}
+
+.table__column {
+  padding: 4px var(--app-pad-cell);
+  font-size: var(--app-fs-small);
+}
+.table__cell {
+  padding: 2px var(--app-pad-cell);
+  font-size: var(--app-fs-base);
+  background-color: transparent;
+}

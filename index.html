@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Oumma — Agentic WorkSpace</title>
+
+    <!-- Load runtime configuration (mirrors brief-userapp web/index.html):
+         - production: the hosting environment serves /config/config.js
+           (K8s ConfigMap / Docker entrypoint) — loaded synchronously so
+           window.APP_CONFIG is defined before the app bundle executes.
+         - development (localhost / port 5173): config.dev.js is loaded
+           synchronously for local backends. -->
+    <script>
+      (function () {
+        var isLocal =
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1' ||
+          location.port === '5173';
+        if (isLocal) {
+          var s = document.createElement('script');
+          // Absolute path: a relative src would 404 on deep routes
+          // (/myprocesses/:id/my-tasks → /myprocesses/:id/config/config.dev.js).
+          s.src = '/config/config.dev.js';
+          s.onload = function () { console.log('Loaded dev APP_CONFIG'); };
+          s.onerror = function () { console.warn('Dev config not found; no APP_CONFIG loaded'); };
+          document.head.appendChild(s);
+        } else {
+          document.write('<script src="/config/config.js"><\/script>');
+        }
+        // Fallback: ensure APP_CONFIG exists to avoid null checks.
+        setTimeout(function () {
+          if (!window.APP_CONFIG) {
+            window.APP_CONFIG = {};
+            console.log('Applied empty APP_CONFIG fallback');
+          }
+        }, 500);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

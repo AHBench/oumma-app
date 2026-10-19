@@ -242,9 +242,8 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   const [selected, setSelected] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [connectFork, setConnectFork] = useState(false);
-  // BPMN toolbox: an active gateway tool changes what a node click means.
-  const [tool, setTool] = useState<null | 'exclusive' | 'fork' | 'joinAnd' | 'joinOr'>(null);
-  const [joinTarget, setJoinTarget] = useState<string | null>(null);
+  // Gateway tools are STANDALONE nodes: clicking a toolbox button places a
+  // diamond on the canvas; the user then connects its input/output freely.
   const [joinPick, setJoinPick] = useState<string[]>([]);
   const [showJoin, setShowJoin] = useState(false);
   const [renameVal, setRenameVal] = useState('');
@@ -429,35 +428,16 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
     setSelected(sel); // opens the right-hand configuration panel
   };
 
-  // Node click with toolbox modes: an active gateway tool (exclusive /
-  // parallel fork / join) reinterprets clicks as connection steps instead
-  // of opening the configuration panel.
+  // Node click: while a "connect from" mode is active (started from the
+  // configuration panel), clicking a node creates the connection. Gateway
+  // nodes are ordinary nodes — connections to/from them are plain edges and
+  // are compiled into BPMN gateway semantics at deploy time.
   const onNodePick = (n: DNode) => (ev: React.MouseEvent) => {
     ev.stopPropagation();
     if (nodeClickGuard()) return;
-    if (tool === 'joinAnd' || tool === 'joinOr') {
-      if (!joinTarget) { setJoinTarget(n.name); return; }
-      if (n.name === joinTarget) return;
-      setJoinPick((p) => (p.includes(n.name) ? p.filter((x) => x !== n.name) : [...p, n.name]));
-      return;
-    }
-    if (tool === 'exclusive' || tool === 'fork') {
-      if (!connectFrom) { setConnectFrom(n.name); return; }
-      if (connectFrom === n.name) { setConnectFrom(null); setTool(null); return; }
-      const src = connectFrom;
-      const mode = tool;
-      setConnectFrom(null);
-      setTool(null);
-      pendingSelEdge.current = { to: n.name, from: src }; // open the connection's config
-      if (mode === 'fork') {
-        void act(() => ds.addEdge(processId, { from: src, to: n.name, fork: true }, token ?? ''), alertErr);
-      } else {
-        const cond = window.prompt(t('bpmnConditionPrompt'), '') ?? '';
-        void act(() => ds.addEdge(processId, { from: src, to: n.name, ...(cond.trim() ? { condition: cond.trim() } : {}) }, token ?? ''), alertErr);
-      }
-      return;
-    }
     if (connectFrom && connectFrom !== n.name) {
+      const src = connectFrom;
+      pendingSelEdge.current = { to: n.name, from: src }; // open the connection's config
       void act(() => ds.addEdge(processId, { from: connectFrom, to: n.name, ...(connectFork ? { fork: true } : {}) }, token ?? ''), alertErr);
       setConnectFrom(null);
       setConnectFork(false);
@@ -466,20 +446,31 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
     selectAt({ kind: 'node', id: n.name });
   };
 
+  // Place a standalone gateway node on the canvas and open its panel.
+  const addGateway = (type: string) => {
+    const taken = new Set(nodes.map((x) => x.name));
+    let name = 'gateway';
+    for (let i = 2; taken.has(name); i++) name = `gateway_${i}`;
+    void act(async () => {
+      await ds.addTask(processId, { name, type }, token ?? '');
+      setSelected({ kind: 'node', id: name });
+    }, alertErr);
+  };
+
 
   const nodeAt = (name: string) => posOvr[name] ?? pos.get(name) ?? { x: 0, y: 0 };
 
   const edgePath = (e: DEdge, fromName: string): string => {
-    const a = nodeAt(fromName);
-    const b = nodeAt(e.to);
+    // Shape-aware anchors: connectors start/end exactly on the node border
+    // (circle border for start/end, diamond tips for gateways, box for steps).
+    const a = anchor(fromName, 'out');
+    const b = anchor(e.to, 'in');
     if (dir === 'lr') {
-      const x1 = a.x + NODE_W, y1 = a.y + NODE_H / 2, x2 = b.x, y2 = b.y + NODE_H / 2;
-      const dx = Math.max(40, (x2 - x1) / 2);
-      return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+      const dx = Math.max(40, (b.x - a.x) / 2);
+      return `M ${a.x} ${a.y} C ${a.x + dx} ${a.y}, ${b.x - dx} ${b.y}, ${b.x} ${b.y}`;
     }
-    const x1 = a.x + NODE_W / 2, y1 = a.y + NODE_H, x2 = b.x + NODE_W / 2, y2 = b.y;
-    const dy = Math.max(30, (y2 - y1) / 2);
-    return `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`;
+    const dy = Math.max(30, (b.y - a.y) / 2);
+    return `M ${a.x} ${a.y} C ${a.x} ${a.y + dy}, ${b.x} ${b.y - dy}, ${b.x} ${b.y}`;
   };
 
   const nodeFill = (n: DNode): string => {
@@ -560,6 +551,15 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                 </div>
               </>
             ) : null}
+            {/* gateway node: how its input/output connections are used */}
+            {selectedNode.type.startsWith('GATEWAY_') ? (
+              <div className="rounded-(--app-radius) border border-separator bg-surface p-2 text-(--app-fs-tiny, 0.7rem) text-muted">
+                {selectedNode.type === 'GATEWAY_EXCLUSIVE' ? t('bpmnGwHintExclusive')
+                  : selectedNode.type === 'GATEWAY_FORK' ? t('bpmnGwHintFork')
+                  : selectedNode.type === 'GATEWAY_JOIN_OR' ? t('bpmnGwHintJoinOr')
+                  : t('bpmnGwHintJoinAnd')}
+              </div>
+            ) : null}
             <div className="border-t border-separator pt-2">
               {connectFrom === selectedNode.name ? (
                 <span className="text-(--app-fs-small) text-(--accent)">{t('bpmnConnectActive')}
@@ -578,7 +578,8 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                 </div>
               )}
             </div>
-            {/* join */}
+            {/* join (not needed on gateway nodes — the join gateway covers it) */}
+            {!selectedNode.type.startsWith('GATEWAY_') ? (
             <div className="border-t border-separator pt-2">
               <button type="button" onClick={() => setShowJoin(!showJoin)}
                 className="rounded-(--app-radius) border border-separator px-2 py-1 text-(--app-fs-small) hover:bg-surface">
@@ -586,7 +587,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
               </button>
               {showJoin ? (
                 <div className="mt-2 space-y-1">
-                  {nodes.filter((n) => n.name !== selectedNode.name && n.type !== 'START' && n.type !== 'END').map((n) => (
+                  {nodes.filter((n) => n.name !== selectedNode.name && n.type !== 'START' && n.type !== 'END' && !n.type.startsWith('GATEWAY_')).map((n) => (
                     <label key={n.name} className="flex items-center gap-1 text-(--app-fs-small)">
                       <input type="checkbox" checked={joinPick.includes(n.name)}
                         onChange={(e) => setJoinPick(e.target.checked ? [...joinPick, n.name] : joinPick.filter((x) => x !== n.name))} />
@@ -601,6 +602,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                 </div>
               ) : null}
             </div>
+            ) : null}
             {/* delete */}
             {selectedNode.type !== 'START' && selectedNode.type !== 'END' ? (
               <div className="mt-auto border-t border-separator pt-2">
@@ -681,7 +683,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
     try {
       const answer = await ds.designAsk({
         processId,
-        prompt: 'Act as a strict BPMN 2.0 reviewer. Review this process design (tasks + topology) and report, as concise bullet points: (1) anomalies — unreachable tasks, tasks with no outgoing edge that are not END, END nodes with no incoming edge, joins with fewer than two branches, ambiguous or contradictory branch conditions, tasks missing a responsible role, roles declared but unused, naming inconsistencies; (2) improvement suggestions (max 5). If the design is healthy, say so in one line. Do NOT call any tools. Respond in plain text only, no markdown code blocks.',
+        prompt: 'Act as a strict BPMN 2.0 reviewer. Review this process design (tasks + topology) and report, as concise bullet points: (1) anomalies — unreachable tasks, tasks with no outgoing edge that are not END, END nodes with no incoming edge, joins with fewer than two branches, ambiguous or contradictory branch conditions, tasks missing a responsible role, roles declared but unused, naming inconsistencies, and unconnected gateways (tasks of type GATEWAY_EXCLUSIVE / GATEWAY_FORK need exactly one input connection and at least one output; GATEWAY_JOIN_AND / GATEWAY_JOIN_OR need at least two inputs and exactly one output — gateways are visual nodes compiled into branch/fork/join edges at deploy time); (2) improvement suggestions (max 5). If the design is healthy, say so in one line. Do NOT call any tools. Respond in plain text only, no markdown code blocks.',
       }, token);
       setValidation(answer.trim() || '—');
     } catch (e) {
@@ -707,13 +709,13 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
       {toolBtn(t('bpmnToolTask'), showAdd === 'system', () => { setShowAdd(showAdd === 'system' ? null : 'system'); setAddName(''); },
         <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.2v1.6M10 12.2v1.6M6.2 10h1.6M12.2 10h1.6" stroke="currentColor" strokeWidth="1.4" /></svg>)}
       <span className="my-0.5 w-6 shrink-0 border-t border-separator" />
-      {toolBtn(t('bpmnExclusive'), tool === 'exclusive', () => { const next = tool === 'exclusive' ? null : 'exclusive'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+      {toolBtn(t('bpmnExclusive'), false, () => addGateway('GATEWAY_EXCLUSIVE'),
         <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7.6 7.6 12.4 12.4M12.4 7.6 7.6 12.4" stroke="currentColor" strokeWidth="1.4" /></svg>)}
-      {toolBtn(t('bpmnForkTool'), tool === 'fork', () => { const next = tool === 'fork' ? null : 'fork'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+      {toolBtn(t('bpmnForkTool'), false, () => addGateway('GATEWAY_FORK'),
         <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.5v7M6.5 10h7" stroke="currentColor" strokeWidth="1.4" /></svg>)}
-      {toolBtn(t('bpmnJoinAnd'), tool === 'joinAnd', () => { const next = tool === 'joinAnd' ? null : 'joinAnd'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+      {toolBtn(t('bpmnJoinAnd'), false, () => addGateway('GATEWAY_JOIN_AND'),
         <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7 8.4h6M7 11.6h6" stroke="currentColor" strokeWidth="1.4" /></svg>)}
-      {toolBtn(t('bpmnJoinOr'), tool === 'joinOr', () => { const next = tool === 'joinOr' ? null : 'joinOr'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+      {toolBtn(t('bpmnJoinOr'), false, () => addGateway('GATEWAY_JOIN_OR'),
         <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>)}
     </>
   );
@@ -726,14 +728,26 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
       <text x={x} y={y + 4} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--accent, #6366f1)">{symbol}</text>
     </g>
   );
-  const outAnchor = (name: string) => {
+  // Shape-aware edge anchors: every connector touches the border of its
+  // node — the circle border for start/end states, the diamond tips for
+  // gateways, the box edges for regular steps.
+  const anchor = (name: string, side: 'in' | 'out') => {
     const p = nodeAt(name);
-    return dir === 'tb' ? { x: p.x + NODE_W / 2, y: p.y + NODE_H } : { x: p.x + NODE_W, y: p.y + NODE_H / 2 };
+    const n = nodes.find((x) => x.name === name);
+    if (n && (n.type === 'START' || n.type === 'END')) {
+      const cx = p.x + 28, cy = p.y + NODE_H / 2, r = 26;
+      return dir === 'tb' ? { x: cx, y: side === 'out' ? cy + r : cy - r } : { x: side === 'out' ? cx + r : cx - r, y: cy };
+    }
+    if (n && n.type.startsWith('GATEWAY_')) {
+      const cx = p.x + NODE_W / 2, cy = p.y + NODE_H / 2, r = Math.min(NODE_W, NODE_H) / 2 + 6;
+      return dir === 'tb' ? { x: cx, y: side === 'out' ? cy + r : cy - r } : { x: side === 'out' ? cx + r : cx - r, y: cy };
+    }
+    return dir === 'tb'
+      ? (side === 'out' ? { x: p.x + NODE_W / 2, y: p.y + NODE_H } : { x: p.x + NODE_W / 2, y: p.y })
+      : (side === 'out' ? { x: p.x + NODE_W, y: p.y + NODE_H / 2 } : { x: p.x, y: p.y + NODE_H / 2 });
   };
-  const inAnchor = (name: string) => {
-    const p = nodeAt(name);
-    return dir === 'tb' ? { x: p.x + NODE_W / 2, y: p.y } : { x: p.x, y: p.y + NODE_H / 2 };
-  };
+  const outAnchor = (name: string) => anchor(name, 'out');
+  const inAnchor = (name: string) => anchor(name, 'in');
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2" dir="ltr">
@@ -783,31 +797,10 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
             </button>
           </span>
         ) : null}
-        {tool || connectFrom || joinTarget ? (
+        {connectFrom ? (
           <span className="flex items-center gap-2 text-(--app-fs-small) text-(--accent)">
-            {tool === 'exclusive' && !connectFrom ? t('bpmnExclusiveHint')
-              : tool === 'exclusive' ? t('bpmnExclusiveHint2', { from: connectFrom })
-              : tool === 'fork' && !connectFrom ? t('bpmnForkToolHint')
-              : tool === 'fork' ? t('bpmnForkToolHint2', { from: connectFrom })
-              : tool === 'joinAnd' || tool === 'joinOr' ? (!joinTarget
-                ? t('bpmnJoinTargetHint')
-                : t('bpmnJoinSourcesHint', { to: joinTarget, n: joinPick.length }))
-              : t('bpmnConnectHint', { from: connectFrom })}
-            {(tool === 'joinAnd' || tool === 'joinOr') && joinTarget ? (
-              <button type="button" disabled={joinPick.length < 2}
-                onClick={() => {
-                  const to = joinTarget;
-                  const srcs = joinPick;
-                  const or = tool === 'joinOr';
-                  setJoinTarget(null); setJoinPick([]); setTool(null);
-                  pendingSelEdge.current = { to, joinFrom: srcs };
-                  void act(() => ds.addEdge(processId, { join_from: srcs, to, join: or ? 'or' : 'and' }, token ?? ''), alertErr);
-                }}
-                className="rounded-(--app-radius) bg-(--accent) px-2 py-1 font-medium text-white disabled:opacity-40">
-                {t('bpmnFinishJoin')}
-              </button>
-            ) : null}
-            <button type="button" onClick={() => { setTool(null); setConnectFrom(null); setConnectFork(false); setJoinTarget(null); setJoinPick([]); }}
+            {t('bpmnConnectHint', { from: connectFrom })}
+            <button type="button" onClick={() => { setConnectFrom(null); setConnectFork(false); setJoinPick([]); }}
               className="underline">{t('bpmnCancel')}</button>
           </span>
         ) : null}
@@ -871,6 +864,26 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
             const isSel = selected?.kind === 'node' && selected.id === n.name;
             const isTarget = connectFrom === n.name;
             const isLifecycle = n.type === 'START' || n.type === 'END';
+            const isGw = n.type.startsWith('GATEWAY_');
+            const gwSymbol = n.type === 'GATEWAY_EXCLUSIVE' ? 'X'
+              : n.type === 'GATEWAY_FORK' ? '+'
+              : n.type === 'GATEWAY_JOIN_OR' ? 'O' : '‖';
+            if (isGw) {
+              const cx = p.x + NODE_W / 2;
+              const cy = p.y + NODE_H / 2;
+              const r = Math.min(NODE_W, NODE_H) / 2 + 6;
+              const dia = (rr: number) => `M ${cx} ${cy - rr} L ${cx + rr} ${cy} L ${cx} ${cy + rr} L ${cx - rr} ${cy} Z`;
+              return (
+                <g key={n.name} className="cursor-move" onClick={onNodePick(n)} onPointerDown={startNodeDrag(n)}>
+                  <path d={dia(r)} fill={nodeFill(n)}
+                    stroke={isSel ? 'var(--accent, #6366f1)' : 'var(--border, #334155)'}
+                    strokeWidth={isSel ? 2.5 : 1.5} />
+                  {isTarget ? <path d={dia(r + 6)} fill="none" stroke="var(--accent, #6366f1)" strokeWidth={2} strokeDasharray="5 4" /> : null}
+                  <text x={cx} y={cy + 5} textAnchor="middle" fontSize={14} fontWeight={700} fill="var(--accent, #6366f1)">{gwSymbol}</text>
+                  <text x={cx} y={cy + r + 14} textAnchor="middle" fontSize={11.5} fontWeight={600} fill="var(--foreground, #e2e8f0)">{n.name}</text>
+                </g>
+              );
+            }
             if (isLifecycle) {
               return (
                 <g key={n.name} className="cursor-move" onClick={onNodePick(n)} onPointerDown={startNodeDrag(n)}>

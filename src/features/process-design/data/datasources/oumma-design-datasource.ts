@@ -749,4 +749,14 @@ export class OummaDesignDataSource {
     );
     return String((res.data as Json)?.answer ?? '');
   }
+
+  /** GET /api/management/design/{pid}/ai-reviews — AI design-review history
+   *  (prompts + verdicts kept with the design, newest first). */
+  async listAiReviews(processId: string, token: string): Promise<Json> {
+    const res = await apiClient.get(
+      `${base(this.oummaUrl)}/api/management/design/${processId}/ai-reviews`,
+      this.auth(token),
+    );
+    return (res.data as Json)?.reviews ?? [];
+  }
 }

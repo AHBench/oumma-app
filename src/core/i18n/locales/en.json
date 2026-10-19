@@ -731,5 +731,6 @@
   "bpmnGwHintExclusive": "Exclusive gateway: connect ONE step to it (input), then connect it to each possible next step (outputs). Set the branch condition on each output connection. It compiles to a conditional branch at deploy.",
   "bpmnGwHintFork": "Parallel fork: connect ONE step to it (input), then connect it to every parallel branch (outputs). It compiles to parallel branches at deploy.",
   "bpmnGwHintJoinAnd": "Parallel join (AND): connect every parallel branch to it (inputs, at least two), then connect it to the step that waits for all (output). It compiles to a join at deploy.",
-  "bpmnGwHintJoinOr": "Inclusive join (OR): connect the branches to it (inputs, at least two), then connect it to the next step (output). The next step starts as soon as ANY input arrives. It compiles to a join at deploy."
+  "bpmnGwHintJoinOr": "Inclusive join (OR): connect the branches to it (inputs, at least two), then connect it to the next step (output). The next step starts as soon as ANY input arrives. It compiles to a join at deploy.",
+  "bpmnReviewHistory": "Previous AI reviews (design history)"
 }

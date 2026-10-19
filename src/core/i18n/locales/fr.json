@@ -731,5 +731,6 @@
   "bpmnGwHintExclusive": "Passerelle exclusive : connectez UNE étape en entrée, puis cette passerelle à chaque étape possible (sorties). Définissez la condition de branche sur chaque connexion de sortie. Compilé en branche conditionnelle au déploiement.",
   "bpmnGwHintFork": "Fusion parallèle : connectez UNE étape en entrée, puis cette passerelle à chaque branche parallèle (sorties). Compilé en branches parallèles au déploiement.",
   "bpmnGwHintJoinAnd": "Synchronisation parallèle (ET) : connectez toutes les branches parallèles en entrée (au moins deux), puis cette passerelle à l'étape qui attend tout (sortie). Compilé en synchronisation au déploiement.",
-  "bpmnGwHintJoinOr": "Synchronisation inclusive (OU) : connectez les branches en entrée (au moins deux), puis cette passerelle à l'étape suivante (sortie). L'étape suivante démarre dès qu'UNE entrée arrive. Compilé en synchronisation au déploiement."
+  "bpmnGwHintJoinOr": "Synchronisation inclusive (OU) : connectez les branches en entrée (au moins deux), puis cette passerelle à l'étape suivante (sortie). L'étape suivante démarre dès qu'UNE entrée arrive. Compilé en synchronisation au déploiement.",
+  "bpmnReviewHistory": "Revisions IA précédentes (historique du design)"
 }

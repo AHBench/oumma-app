@@ -263,6 +263,8 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   const [validating, setValidating] = useState(false);
   const [validation, setValidation] = useState<string | null>(null);
   const [valOpen, setValOpen] = useState(false);
+  // Design history: previous AI reviews (prompt + verdict) for this process.
+  const [reviewHistory, setReviewHistory] = useState<{ id: string; designVersion: number; prompt: string; answer: string; createdAt: string }[]>([]);
   const pendingSelEdge = useRef<{ to: string; from?: string; joinFrom?: string[] } | null>(null);
   const [view, setView] = useState({ x: 20, y: 20, k: 1 });
   const svgRef = useRef<SVGSVGElement>(null);
@@ -669,6 +671,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
     setValidating(true);
     setValOpen(true);
     setValidation(null);
+    void ds.listAiReviews(processId, token).then((h) => setReviewHistory(h as never)).catch(() => undefined);
     try {
       const answer = await ds.designAsk({
         processId,
@@ -679,6 +682,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
       setValidation(e instanceof Error ? e.message : String(e));
     } finally {
       setValidating(false);
+      void ds.listAiReviews(processId, token).then((h) => setReviewHistory(h as never)).catch(() => undefined);
     }
   };
 
@@ -794,6 +798,19 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
             <button type="button" onClick={() => setValOpen(false)} className="rounded px-1.5 py-0.5 hover:bg-surface">✕</button>
           </div>
           <div className="whitespace-pre-wrap">{validating ? t('bpmnValidating') : validation}</div>
+          {reviewHistory.length > 0 ? (
+            <div className="mt-2 border-t border-separator pt-1">
+              <div className="mb-1 font-semibold">{t('bpmnReviewHistory')}</div>
+              {reviewHistory.slice(0, 5).map((rv) => (
+                <details key={rv.id} className="mb-1">
+                  <summary className="cursor-pointer">
+                    {new Date(rv.createdAt).toLocaleString()} · v{rv.designVersion} · {String(rv.prompt).length > 70 ? `${String(rv.prompt).slice(0, 70)}…` : rv.prompt}
+                  </summary>
+                  <div className="mt-1 whitespace-pre-wrap">{String(rv.answer)}</div>
+                </details>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 

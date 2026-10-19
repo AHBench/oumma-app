@@ -60,6 +60,10 @@ export function ProcessDesignPage() {
   );
   const [togglingStep, setTogglingStep] = useState<string | null>(null);
   const [initialToggleErr, setInitialToggleErr] = useState<string | null>(null);
+  // "View version" mode: when a version is selected, EVERY tab renders that
+  // version's data read-only (VersionView sections); the live document is
+  // untouched and no edit controls are rendered.
+  const viewing = viewVersion != null && viewDesign != null;
 
   // Engine definition (tasks + topology) from /definitions — extract-by-id
   // only returns the app section, so the diagram must use this source.
@@ -142,20 +146,43 @@ export function ProcessDesignPage() {
           </div>
         )}
 
+        {/* Version-view banner: the whole workspace is showing this version */}
+        {viewVersion != null ? (
+          <div className="flex shrink-0 items-center gap-2 rounded-(--app-radius) border border-(--accent)/50 bg-(--accent)/5 px-3 py-2 text-(--app-fs-small)">
+            <span className="font-semibold">{t('versionsViewing')}: <span className="font-mono">v{String(viewVersion)}</span></span>
+            <Badge label={t('versionsReadOnly')} on />
+            <span className="text-muted">{t('versionsViewHint')}</span>
+            <button type="button" onClick={() => { setViewVersion(null); setViewDesign(null); }}
+              className="ml-auto rounded-(--app-radius) border border-separator px-2 py-0.5 hover:bg-surface">
+              {t('versionsClose')}
+            </button>
+          </div>
+        ) : null}
+
         {designer && tab === 'diagram' && (
           <div className="flex min-h-0 flex-1 flex-col rounded-(--app-radius) border border-separator p-3">
             <div className="mb-2 shrink-0 text-(--app-fs-small) font-semibold">{t('designDiagram')}</div>
-            <BpmnDesigner
-              processId={processId ?? ''}
-              definition={definition ?? null}
-              token={token}
-              roles={roles.map((r) => String(r.role_id ?? r.role ?? ''))}
-              onSaved={() => void refetchDefinition()}
-            />
+            {viewing ? (
+              <VersionView design={viewDesign} section="design" />
+            ) : viewVersion != null ? (
+              <p className="text-(--app-fs-small) text-muted">{t('versionsLoading')}</p>
+            ) : (
+              <BpmnDesigner
+                processId={processId ?? ''}
+                definition={definition ?? null}
+                token={token}
+                roles={roles.map((r) => String(r.role_id ?? r.role ?? ''))}
+                onSaved={() => void refetchDefinition()}
+              />
+            )}
           </div>
         )}
 
-        {(tab === 'overview' || !designer) && <>
+        {(tab === 'overview' || !designer) && viewing ? (
+          <Section title={t('designTabOverview')}>
+            <VersionView design={viewDesign} section="overview" />
+          </Section>
+        ) : (tab === 'overview' || !designer) && <>
 
         {designer ? (
           <Section title={t('processIconTitle')}>
@@ -258,10 +285,9 @@ export function ProcessDesignPage() {
 
         {designer && tab === 'forms' && (
           <Section title={t('designTabForms')}>
-            {/* Initial step — each step can be marked initial; the "Create a
-                dossier" menu is offered only while at least one step is
-                initial. All initial steps must share the same form structure
-                (enforced server-side). */}
+            {viewing ? (
+              <VersionView design={viewDesign} section="forms" />
+            ) : (<>
             <div className="mb-3 rounded-(--app-radius) border border-separator p-2">
               <div className="mb-1 text-(--app-fs-small) font-semibold">{t('formsInitialStep')}</div>
               {(formSteps ?? []).length === 0 ? (
@@ -327,11 +353,15 @@ export function ProcessDesignPage() {
               steps={formSteps ?? []}
               onSaved={() => { void refetchForms(); }}
             />
+            </>)}
           </Section>
         )}
 
         {designer && tab === 'roles' && (
           <Section title={t('rolesTab')}>
+            {viewing ? (
+              <VersionView design={viewDesign} section="roles" />
+            ) : (
             <RolesTab
               processId={processId ?? ''}
               token={token ?? ''}
@@ -339,17 +369,26 @@ export function ProcessDesignPage() {
               roles={roles}
               onSaved={() => void refetch()}
             />
+            )}
           </Section>
         )}
 
         {designer && tab === 'search-items' && (
           <Section title={t('searchItemsTab')}>
+            {viewing ? (
+              <VersionView design={viewDesign} section="search" />
+            ) : (
             <SearchItemsTab processId={processId ?? ''} onSaved={() => void refetch()} />
+            )}
           </Section>
         )}
         {designer && tab === 'tools' && (
           <Section title={t('toolsTab')}>
+            {viewing ? (
+              <VersionView design={viewDesign} section="tools" />
+            ) : (
             <ToolsTab processId={processId ?? ''} tasks={defTasks} onSaved={() => void refetch()} />
+            )}
           </Section>
         )}
         {designer && tab === 'versions' && (
@@ -445,21 +484,6 @@ export function ProcessDesignPage() {
                 </div>
               );
             })()}
-            {viewVersion != null ? (
-              <div className="rounded-(--app-radius) border border-separator bg-surface/40 p-3">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="text-(--app-fs-small) font-semibold">
-                    {t('versionsViewing')}: <span className="font-mono">v{String(viewVersion)}</span>
-                  </span>
-                  <Badge label={t('versionsReadOnly')} on />
-                  <button type="button" onClick={() => { setViewVersion(null); setViewDesign(null); }}
-                    className="ml-auto rounded-(--app-radius) border border-separator px-2 py-0.5 text-(--app-fs-small) hover:bg-surface">
-                    {t('versionsClose')}
-                  </button>
-                </div>
-                {viewDesign ? <VersionView design={viewDesign} /> : <p className="text-(--app-fs-small) text-muted">{t('versionsLoading')}</p>}
-              </div>
-            ) : null}
           </Section>
         )}
       </div>

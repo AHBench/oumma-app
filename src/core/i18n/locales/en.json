@@ -702,5 +702,23 @@
     "password_set_failed": "The account was created but the password could not be saved. Please contact an administrator.",
     "network": "Could not reach the server. Please check your connection and try again.",
     "generic": "Something went wrong. Please try again, and contact an administrator if the problem persists."
-  }
+  },
+  "bpmnToolbox": "BPMN toolbox",
+  "bpmnStart": "Start event",
+  "bpmnEnd": "End event",
+  "bpmnEndName": "end",
+  "bpmnHuman": "Human task",
+  "bpmnToolTask": "Tool (system) task",
+  "bpmnExclusive": "Exclusive gateway — conditional branch",
+  "bpmnExclusiveHint": "Exclusive gateway: click the source step",
+  "bpmnExclusiveHint2": "Exclusive gateway: connect \"{{from}}\" → click the target step",
+  "bpmnConditionPrompt": "Condition for this branch (e.g. \"amount > 1000\"):",
+  "bpmnForkTool": "Parallel gateway — fork",
+  "bpmnForkToolHint": "Parallel fork: click the source step",
+  "bpmnForkToolHint2": "Parallel fork: connect \"{{from}}\" → click the target step",
+  "bpmnJoinAnd": "Parallel join (AND)",
+  "bpmnJoinOr": "Inclusive join (OR)",
+  "bpmnJoinTargetHint": "Join: click the step the branches join into",
+  "bpmnJoinSourcesHint": "Join into \"{{to}}\": click its source steps ({{n}} selected)",
+  "bpmnFinishJoin": "Finish join"
 }

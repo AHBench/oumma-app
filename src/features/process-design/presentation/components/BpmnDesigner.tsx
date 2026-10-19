@@ -55,6 +55,9 @@ interface DEdge {
 
 const NODE_W = 172;
 const NODE_H = 56;
+// BPMN toolbox button style (+ -active variant for the selected tool).
+const tb = 'flex h-7 w-7 items-center justify-center rounded border border-transparent text-foreground hover:bg-surface';
+const tbActive = ' bg-(--accent) text-white';
 
 /** Free-placement overrides remembered per process. */
 function loadPosOvr(processId: string): Record<string, { x: number; y: number }> {
@@ -237,12 +240,15 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   const [selected, setSelected] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null);
   const [connectFrom, setConnectFrom] = useState<string | null>(null);
   const [connectFork, setConnectFork] = useState(false);
+  // BPMN toolbox: an active gateway tool changes what a node click means.
+  const [tool, setTool] = useState<null | 'exclusive' | 'fork' | 'joinAnd' | 'joinOr'>(null);
+  const [joinTarget, setJoinTarget] = useState<string | null>(null);
   const [joinPick, setJoinPick] = useState<string[]>([]);
   const [showJoin, setShowJoin] = useState(false);
   const [renameVal, setRenameVal] = useState('');
   const [groupVal, setGroupVal] = useState('');
   const [descVal, setDescVal] = useState('');
-  const [showAdd, setShowAdd] = useState<null | 'human' | 'system'>(null);
+  const [showAdd, setShowAdd] = useState<null | 'human' | 'system' | 'end'>(null);
   const [addName, setAddName] = useState('');
   const [addGroup, setAddGroup] = useState('');
   const [view, setView] = useState({ x: 20, y: 20, k: 1 });
@@ -266,6 +272,14 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   const nodes = useMemo(() => normTasks(sourceDef), [sourceDef]);
   const edges = useMemo(() => normEdges(sourceDef), [sourceDef]);
   const pos = useMemo(() => layout(nodes, edges, dir), [nodes, edges, dir]);
+  // An exclusive gateway shows up as a node with 2+ outgoing edges.
+  const outCount = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const e of edges) if (e.from) m[e.from] = (m[e.from] ?? 0) + 1;
+    return m;
+  }, [edges]);
+  const hasStart = useMemo(() => nodes.some((n) => n.type === 'START'), [nodes]);
+
 
   // Free placement: the user can drag any step anywhere to untangle a
   // complicated design. Overrides are layered on top of the computed
@@ -369,6 +383,43 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   const selectAt = (sel: { kind: 'node' | 'edge'; id: string }) => {
     setSelected(sel); // opens the right-hand configuration panel
   };
+
+  // Node click with toolbox modes: an active gateway tool (exclusive /
+  // parallel fork / join) reinterprets clicks as connection steps instead
+  // of opening the configuration panel.
+  const onNodePick = (n: DNode) => (ev: React.MouseEvent) => {
+    ev.stopPropagation();
+    if (nodeClickGuard()) return;
+    if (tool === 'joinAnd' || tool === 'joinOr') {
+      if (!joinTarget) { setJoinTarget(n.name); return; }
+      if (n.name === joinTarget) return;
+      setJoinPick((p) => (p.includes(n.name) ? p.filter((x) => x !== n.name) : [...p, n.name]));
+      return;
+    }
+    if (tool === 'exclusive' || tool === 'fork') {
+      if (!connectFrom) { setConnectFrom(n.name); return; }
+      if (connectFrom === n.name) { setConnectFrom(null); setTool(null); return; }
+      const src = connectFrom;
+      const mode = tool;
+      setConnectFrom(null);
+      setTool(null);
+      if (mode === 'fork') {
+        void act(() => ds.addEdge(processId, { from: src, to: n.name, fork: true }, token ?? ''), alertErr);
+      } else {
+        const cond = window.prompt(t('bpmnConditionPrompt'), '') ?? '';
+        void act(() => ds.addEdge(processId, { from: src, to: n.name, ...(cond.trim() ? { condition: cond.trim() } : {}) }, token ?? ''), alertErr);
+      }
+      return;
+    }
+    if (connectFrom && connectFrom !== n.name) {
+      void act(() => ds.addEdge(processId, { from: connectFrom, to: n.name, ...(connectFork ? { fork: true } : {}) }, token ?? ''), alertErr);
+      setConnectFrom(null);
+      setConnectFork(false);
+      return;
+    }
+    selectAt({ kind: 'node', id: n.name });
+  };
+
 
   const nodeAt = (name: string) => posOvr[name] ?? pos.get(name) ?? { x: 0, y: 0 };
 
@@ -528,14 +579,51 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
           <option value="circular">{t('layoutCircular')}</option>
           <option value="force">{t('layoutForce')}</option>
         </select>
-        <button type="button" onClick={() => { setShowAdd(showAdd === 'human' ? null : 'human'); setAddName(''); setAddGroup(roles[0] ?? ''); }}
-          className="rounded-(--app-radius) border border-separator px-3 py-1 text-(--app-fs-small) hover:bg-surface">
-          {t('bpmnAddHuman')}
-        </button>
-        <button type="button" onClick={() => { setShowAdd(showAdd === 'system' ? null : 'system'); setAddName(''); }}
-          className="rounded-(--app-radius) border border-separator px-3 py-1 text-(--app-fs-small) hover:bg-surface">
-          {t('bpmnAddSystem')}
-        </button>
+        {/* BPMN toolbox — every notation the design model supports, as icons */}
+        <div className="flex items-center gap-1 rounded-(--app-radius) border border-separator p-1" title={t('bpmnToolbox')}>
+          <button type="button" title={t('bpmnStart')}
+            disabled={hasStart}
+            onClick={() => void act(() => ds.addTask(processId, { name: 'start', type: 'START' }, token ?? ''), alertErr)}
+            className="flex h-7 w-7 items-center justify-center rounded hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">
+            <svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="var(--success, #16a34a)" strokeWidth="2" /></svg>
+          </button>
+          <button type="button" title={t('bpmnEnd')}
+            onClick={() => { setShowAdd(showAdd === 'end' ? null : 'end'); setAddName(t('bpmnEndName')); }}
+            className={tb + (showAdd === 'end' ? tbActive : '')}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="5.5" fill="none" stroke="var(--danger, #dc2626)" strokeWidth="3.5" /></svg>
+          </button>
+          <button type="button" title={t('bpmnHuman')}
+            onClick={() => { setShowAdd(showAdd === 'human' ? null : 'human'); setAddName(''); setAddGroup(roles[0] ?? ''); }}
+            className={tb + (showAdd === 'human' ? tbActive : '')}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="9" r="1.9" fill="currentColor" /><path d="M6.6 13.6c.3-1.9 1.7-2.8 3.4-2.8s3.1.9 3.4 2.8" fill="currentColor" /></svg>
+          </button>
+          <button type="button" title={t('bpmnToolTask')}
+            onClick={() => { setShowAdd(showAdd === 'system' ? null : 'system'); setAddName(''); }}
+            className={tb + (showAdd === 'system' ? tbActive : '')}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.2v1.6M10 12.2v1.6M6.2 10h1.6M12.2 10h1.6" stroke="currentColor" strokeWidth="1.4" /></svg>
+          </button>
+          <span className="mx-0.5 h-5 w-px bg-separator" />
+          <button type="button" title={t('bpmnExclusive')}
+            onClick={() => { const next = tool === 'exclusive' ? null : 'exclusive'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
+            className={tb + (tool === 'exclusive' ? tbActive : '')}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7.6 7.6 12.4 12.4M12.4 7.6 7.6 12.4" stroke="currentColor" strokeWidth="1.4" /></svg>
+          </button>
+          <button type="button" title={t('bpmnForkTool')}
+            onClick={() => { const next = tool === 'fork' ? null : 'fork'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
+            className={tb + (tool === 'fork' ? tbActive : '')}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.5v7M6.5 10h7" stroke="currentColor" strokeWidth="1.4" /></svg>
+          </button>
+          <button type="button" title={t('bpmnJoinAnd')}
+            onClick={() => { const next = tool === 'joinAnd' ? null : 'joinAnd'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
+            className={tb + (tool === 'joinAnd' ? tbActive : '')}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7 8.4h6M7 11.6h6" stroke="currentColor" strokeWidth="1.4" /></svg>
+          </button>
+          <button type="button" title={t('bpmnJoinOr')}
+            onClick={() => { const next = tool === 'joinOr' ? null : 'joinOr'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
+            className={tb + (tool === 'joinOr' ? tbActive : '')}>
+            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
+          </button>
+        </div>
         {Object.keys(posOvr).length > 0 ? (
           <button type="button" onClick={clearPosOvr}
             className="rounded-(--app-radius) border border-separator px-3 py-1 text-(--app-fs-small) hover:bg-surface">
@@ -556,17 +644,40 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
               if (!addName.trim()) return;
               void act(() => (showAdd === 'human'
                 ? ds.addTask(processId, { name: addName.trim(), group: addGroup }, token ?? '')
-                : ds.addSystemTask(processId, { name: addName.trim() }, token ?? '')), alertErr);
+                : showAdd === 'end'
+                  ? ds.addTask(processId, { name: addName.trim(), type: 'END' }, token ?? '')
+                  : ds.addSystemTask(processId, { name: addName.trim() }, token ?? '')), alertErr);
               setShowAdd(null);
             }} className="rounded-(--app-radius) bg-(--accent) px-2 py-1 text-(--app-fs-small) font-medium text-white">
               {t('bpmnAdd')}
             </button>
           </span>
         ) : null}
-        {connectFrom ? (
-          <span className="text-(--app-fs-small) text-(--accent)">
-            {t('bpmnConnectHint', { from: connectFrom })}
-            <button type="button" onClick={() => setConnectFrom(null)} className="ml-2 underline">{t('bpmnCancel')}</button>
+        {tool || connectFrom || joinTarget ? (
+          <span className="flex items-center gap-2 text-(--app-fs-small) text-(--accent)">
+            {tool === 'exclusive' && !connectFrom ? t('bpmnExclusiveHint')
+              : tool === 'exclusive' ? t('bpmnExclusiveHint2', { from: connectFrom })
+              : tool === 'fork' && !connectFrom ? t('bpmnForkToolHint')
+              : tool === 'fork' ? t('bpmnForkToolHint2', { from: connectFrom })
+              : tool === 'joinAnd' || tool === 'joinOr' ? (!joinTarget
+                ? t('bpmnJoinTargetHint')
+                : t('bpmnJoinSourcesHint', { to: joinTarget, n: joinPick.length }))
+              : t('bpmnConnectHint', { from: connectFrom })}
+            {(tool === 'joinAnd' || tool === 'joinOr') && joinTarget ? (
+              <button type="button" disabled={joinPick.length < 2}
+                onClick={() => {
+                  const to = joinTarget;
+                  const srcs = joinPick;
+                  const or = tool === 'joinOr';
+                  setJoinTarget(null); setJoinPick([]); setTool(null);
+                  void act(() => ds.addEdge(processId, { join_from: srcs, to, join: or ? 'or' : 'and' }, token ?? ''), alertErr);
+                }}
+                className="rounded-(--app-radius) bg-(--accent) px-2 py-1 font-medium text-white disabled:opacity-40">
+                {t('bpmnFinishJoin')}
+              </button>
+            ) : null}
+            <button type="button" onClick={() => { setTool(null); setConnectFrom(null); setConnectFork(false); setJoinTarget(null); setJoinPick([]); }}
+              className="underline">{t('bpmnCancel')}</button>
           </span>
         ) : null}
       </div>
@@ -637,7 +748,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
             const isLifecycle = n.type === 'START' || n.type === 'END';
             if (isLifecycle) {
               return (
-                <g key={n.name} className="cursor-move" onClick={(ev) => { ev.stopPropagation(); if (nodeClickGuard()) return; if (connectFrom && connectFrom !== n.name) { void act(() => ds.addEdge(processId, { from: connectFrom, to: n.name, ...(connectFork ? { fork: true } : {}) }, token ?? ''), alertErr); setConnectFrom(null); setConnectFork(false); return; } selectAt({ kind: 'node', id: n.name }); }} onPointerDown={startNodeDrag(n)}>
+                <g key={n.name} className="cursor-move" onClick={onNodePick(n)} onPointerDown={startNodeDrag(n)}>
                   <circle cx={p.x + 28} cy={p.y + NODE_H / 2} r={26}
                     fill={nodeFill(n)} opacity={0.9}
                     stroke={isSel ? 'var(--accent, #6366f1)' : 'transparent'} strokeWidth={3} />
@@ -649,13 +760,20 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
               );
             }
             return (
-              <g key={n.name} className="cursor-move" onClick={(ev) => { ev.stopPropagation(); if (nodeClickGuard()) return; if (connectFrom && connectFrom !== n.name) { void act(() => ds.addEdge(processId, { from: connectFrom, to: n.name, ...(connectFork ? { fork: true } : {}) }, token ?? ''), alertErr); setConnectFrom(null); setConnectFork(false); return; } selectAt({ kind: 'node', id: n.name }); }} onPointerDown={startNodeDrag(n)}>
+              <g key={n.name} className="cursor-move" onClick={onNodePick(n)} onPointerDown={startNodeDrag(n)}>
                 <rect x={p.x} y={p.y} width={NODE_W} height={NODE_H} rx={10}
                   fill={nodeFill(n)}
                   stroke={isSel ? 'var(--accent, #6366f1)' : 'var(--border, #334155)'}
                   strokeWidth={isSel ? 2.5 : 1.2}
                   strokeDasharray={n.type === 'SYSTEM' && !n.tool && !n.url ? '6 4' : undefined} />
                 {isTarget ? <rect x={p.x - 4} y={p.y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={13} fill="none" stroke="var(--accent, #6366f1)" strokeWidth={2} strokeDasharray="5 4" /> : null}
+                {/* exclusive-gateway mark: this node branches on conditions */}
+                {(outCount[n.name] ?? 0) >= 2 ? (
+                  <g>
+                    <rect x={p.x + NODE_W - 16} y={p.y - 8} width={13} height={13} transform={`rotate(45 ${p.x + NODE_W - 9.5} ${p.y - 1.5})`} fill="var(--surface, #1e293b)" stroke="var(--accent, #6366f1)" strokeWidth={1.3} />
+                    <text x={p.x + NODE_W - 9.5} y={p.y + 1.5} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="var(--accent, #6366f1)">X</text>
+                  </g>
+                ) : null}
                 <text x={p.x + 10} y={p.y + 22} fontSize={12.5} fontWeight={600} fill="var(--foreground, #e2e8f0)">
                   {(n.type === 'SYSTEM' ? '⚙ ' : '👤 ') + n.name}
                 </text>

@@ -702,5 +702,23 @@
     "password_set_failed": "Le compte a été créé mais le mot de passe n'a pas pu être enregistré. Veuillez contacter un administrateur.",
     "network": "Impossible de joindre le serveur. Veuillez vérifier votre connexion et réessayer.",
     "generic": "Une erreur s'est produite. Veuillez réessayer et contacter un administrateur si le problème persiste."
-  }
+  },
+  "bpmnToolbox": "Boîte à outils BPMN",
+  "bpmnStart": "Événement de départ",
+  "bpmnEnd": "Événement de fin",
+  "bpmnEndName": "fin",
+  "bpmnHuman": "Tâche humaine",
+  "bpmnToolTask": "Tâche outil (système)",
+  "bpmnExclusive": "Passerelle exclusive — branche conditionnelle",
+  "bpmnExclusiveHint": "Passerelle exclusive : cliquez sur l'étape source",
+  "bpmnExclusiveHint2": "Passerelle exclusive : connectez « {{from}} » → cliquez sur l'étape cible",
+  "bpmnConditionPrompt": "Condition de cette branche (ex. « montant > 1000 ») :",
+  "bpmnForkTool": "Passerelle parallèle — fourche",
+  "bpmnForkToolHint": "Fourche parallèle : cliquez sur l'étape source",
+  "bpmnForkToolHint2": "Fourche parallèle : connectez « {{from}} » → cliquez sur l'étape cible",
+  "bpmnJoinAnd": "Jointure parallèle (ET)",
+  "bpmnJoinOr": "Jointure inclusive (OU)",
+  "bpmnJoinTargetHint": "Jointure : cliquez sur l'étape de regroupement",
+  "bpmnJoinSourcesHint": "Jointure vers « {{to}} » : cliquez sur les étapes sources ({{n}} sélectionnée(s))",
+  "bpmnFinishJoin": "Terminer la jointure"
 }

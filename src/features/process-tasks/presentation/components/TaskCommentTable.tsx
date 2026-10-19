@@ -6,6 +6,30 @@ import type { TaskComment, TaskGroup, TaskItem } from '../../data/models/task-mo
 import type { TaskItemLabel } from '../../../process-page/data/models/task-group-label';
 import { Modal, btnCls } from '../../../shared/components/ui';
 
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 2l2.1 6.4L20.5 10l-6.4 2.1L12 18.5 9.9 12.1 3.5 10l6.4-1.6L12 2z" />
+    </svg>
+  );
+}
+function PencilIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25ZM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83Z" />
+    </svg>
+  );
+}
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
 interface Props {
   comments: TaskComment[];
   process: ProcessApp;
@@ -80,21 +104,22 @@ export function TaskCommentTable(props: Props) {
                 <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-(--app-fs-body) text-foreground">
                   {c.content}
                 </p>
-                <span className="flex shrink-0 gap-2 opacity-0 transition group-hover:opacity-100">
+                <span className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
                   {onSuggestComment ? (
                     <button
                       title={t('askAiAboutComment')}
-                      className="text-(--app-fs-small) font-medium text-(--accent) hover:underline"
+                      className="rounded p-1 text-(--accent) hover:bg-surface"
                       onClick={() => onSuggestComment(c.content, String(c.content.trim().split(/\s+/).length), token)}
                     >
-                      AI
+                      <SparkleIcon className="h-3.5 w-3.5" />
                     </button>
                   ) : null}
-                  <button className="text-(--app-fs-small) font-medium text-(--accent) hover:underline" onClick={() => setEditing(c)}>
-                    {t('editComment')}
+                  <button title={t('editComment')} className="rounded p-1 text-(--accent) hover:bg-surface" onClick={() => setEditing(c)}>
+                    <PencilIcon className="h-3.5 w-3.5" />
                   </button>
                   <button
-                    className="text-(--app-fs-small) font-medium text-(--danger) hover:underline"
+                    title={t('delete')}
+                    className="rounded p-1 text-(--danger) hover:bg-surface"
                     onClick={() => {
                       if (window.confirm(t('deleteCommentConfirmation'))) {
                         void onDeleteComment(c.id).catch((e) =>
@@ -103,7 +128,7 @@ export function TaskCommentTable(props: Props) {
                       }
                     }}
                   >
-                    {t('delete')}
+                    <TrashIcon className="h-3.5 w-3.5" />
                   </button>
                 </span>
               </div>

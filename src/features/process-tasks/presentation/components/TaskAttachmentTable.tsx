@@ -7,6 +7,32 @@ import type { TaskItemLabel } from '../../../process-page/data/models/task-group
 import { Modal, btnCls } from '../../../shared/components/ui';
 import { AddAttachmentDialog } from './AddAttachmentDialog';
 
+function SparkleIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 2l2.1 6.4L20.5 10l-6.4 2.1L12 18.5 9.9 12.1 3.5 10l6.4-1.6L12 2z" />
+    </svg>
+  );
+}
+function DownloadIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <path d="M12 3v12" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M4 21h16" />
+    </svg>
+  );
+}
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className}>
+      <path d="M3 6h18" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </svg>
+  );
+}
+
 interface Props {
   attachments: TaskAttachment[];
   process: ProcessApp;
@@ -93,19 +119,19 @@ export function TaskAttachmentTable(props: Props) {
                   {a.tags && a.tags.length > 0 ? ` · ${a.tags.map((tag) => tag.name).join(', ')}` : ''}
                 </div>
               </div>
-              <span className="flex shrink-0 gap-2 opacity-0 transition group-hover:opacity-100">
+              <span className="flex shrink-0 items-center gap-1 opacity-0 transition group-hover:opacity-100">
                 {a.content ? (
-                  <button title={t('download')} className="text-(--app-fs-small) font-medium text-(--accent) hover:underline" onClick={() => void download(a)}>
-                    {t('download')}
+                  <button title={t('download')} className="rounded p-1 text-(--accent) hover:bg-surface" onClick={() => void download(a)}>
+                    <DownloadIcon className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
                 {onAskAI && a.content ? (
-                  <button title={t('askAiAboutAttachment')} className="text-(--app-fs-small) font-medium text-(--accent) hover:underline" onClick={() => onAskAI([a.content], token, a.name)}>
-                    AI
+                  <button title={t('askAiAboutAttachment')} className="rounded p-1 text-(--accent) hover:bg-surface" onClick={() => onAskAI([a.content], token, a.name)}>
+                    <SparkleIcon className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
-                <button className="text-(--app-fs-small) font-medium text-(--danger) hover:underline" onClick={() => setConfirmDelete(a)}>
-                  {t('delete')}
+                <button title={t('delete')} className="rounded p-1 text-(--danger) hover:bg-surface" onClick={() => setConfirmDelete(a)}>
+                  <TrashIcon className="h-3.5 w-3.5" />
                 </button>
               </span>
             </div>

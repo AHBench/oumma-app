@@ -446,17 +446,6 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
     selectAt({ kind: 'node', id: n.name });
   };
 
-  // Place a standalone gateway node on the canvas and open its panel.
-  const addGateway = (type: string) => {
-    const taken = new Set(nodes.map((x) => x.name));
-    let name = 'gateway';
-    for (let i = 2; taken.has(name); i++) name = `gateway_${i}`;
-    void act(async () => {
-      await ds.addTask(processId, { name, type }, token ?? '');
-      setSelected({ kind: 'node', id: name });
-    }, alertErr);
-  };
-
 
   const nodeAt = (name: string) => posOvr[name] ?? pos.get(name) ?? { x: 0, y: 0 };
 
@@ -683,7 +672,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
     try {
       const answer = await ds.designAsk({
         processId,
-        prompt: 'Act as a strict BPMN 2.0 reviewer. Review this process design (tasks + topology) and report, as concise bullet points: (1) anomalies — unreachable tasks, tasks with no outgoing edge that are not END, END nodes with no incoming edge, joins with fewer than two branches, ambiguous or contradictory branch conditions, tasks missing a responsible role, roles declared but unused, naming inconsistencies, and unconnected gateways (tasks of type GATEWAY_EXCLUSIVE / GATEWAY_FORK need exactly one input connection and at least one output; GATEWAY_JOIN_AND / GATEWAY_JOIN_OR need at least two inputs and exactly one output — gateways are visual nodes compiled into branch/fork/join edges at deploy time); (2) improvement suggestions (max 5). If the design is healthy, say so in one line. Do NOT call any tools. Respond in plain text only, no markdown code blocks.',
+        prompt: 'Act as a strict BPMN 2.0 reviewer. Review this process design (tasks + topology) and report, as concise bullet points: (1) anomalies — unreachable tasks, tasks with no outgoing edge that are not END, END nodes with no incoming edge, joins (join_from edges) with fewer than two branches, a branch (a step with 2+ outgoing edges = an exclusive gateway) whose output edges have no condition or whose conditions are ambiguous/contradictory, parallel forks (edges with fork:true) whose branches never rejoin, tasks missing a responsible role, roles declared but unused, naming inconsistencies; (2) improvement suggestions (max 5). Note on rendering: gateways are NOT separate nodes in this model — a step with 2+ outgoing edges renders an exclusive gateway (X) on its border, fork:true edges render a parallel fork (+), and join_from edges render a join (parallel or inclusive) on the target step. If the design is healthy, say so in one line. Do NOT call any tools. Respond in plain text only, no markdown code blocks.',
       }, token);
       setValidation(answer.trim() || '—');
     } catch (e) {
@@ -708,15 +697,6 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
         <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="9" r="1.9" fill="currentColor" /><path d="M6.6 13.6c.3-1.9 1.7-2.8 3.4-2.8s3.1.9 3.4 2.8" fill="currentColor" /></svg>)}
       {toolBtn(t('bpmnToolTask'), showAdd === 'system', () => { setShowAdd(showAdd === 'system' ? null : 'system'); setAddName(''); },
         <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.2v1.6M10 12.2v1.6M6.2 10h1.6M12.2 10h1.6" stroke="currentColor" strokeWidth="1.4" /></svg>)}
-      <span className="my-0.5 w-6 shrink-0 border-t border-separator" />
-      {toolBtn(t('bpmnExclusive'), false, () => addGateway('GATEWAY_EXCLUSIVE'),
-        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7.6 7.6 12.4 12.4M12.4 7.6 7.6 12.4" stroke="currentColor" strokeWidth="1.4" /></svg>)}
-      {toolBtn(t('bpmnForkTool'), false, () => addGateway('GATEWAY_FORK'),
-        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.5v7M6.5 10h7" stroke="currentColor" strokeWidth="1.4" /></svg>)}
-      {toolBtn(t('bpmnJoinAnd'), false, () => addGateway('GATEWAY_JOIN_AND'),
-        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7 8.4h6M7 11.6h6" stroke="currentColor" strokeWidth="1.4" /></svg>)}
-      {toolBtn(t('bpmnJoinOr'), false, () => addGateway('GATEWAY_JOIN_OR'),
-        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>)}
     </>
   );
 
@@ -907,9 +887,9 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                 {isTarget ? <rect x={p.x - 4} y={p.y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={13} fill="none" stroke="var(--accent, #6366f1)" strokeWidth={2} strokeDasharray="5 4" /> : null}
                 {/* BPMN gateway diamonds: exclusive (X) / parallel fork (+) at the
                     output anchor; parallel (‖) / inclusive (O) joins at the input. */}
-                {forkOut[n.name] ? (() => { const a = outAnchor(n.name); return <Gateway x={a.x + 16} y={a.y} symbol="+" />; })() : null}
-                {!forkOut[n.name] && (outCount[n.name] ?? 0) >= 2 ? (() => { const a = outAnchor(n.name); return <Gateway x={a.x + 16} y={a.y} symbol="X" />; })() : null}
-                {joinIn[n.name] ? (() => { const a = inAnchor(n.name); return <Gateway x={a.x - 16} y={a.y} symbol={joinIn[n.name] === 'or' ? 'O' : '‖'} />; })() : null}
+                {forkOut[n.name] ? (() => { const a = outAnchor(n.name); const o = 18.5; return <Gateway x={dir === 'tb' ? a.x : a.x + o} y={dir === 'tb' ? a.y + o : a.y} symbol="+" />; })() : null}
+                {!forkOut[n.name] && (outCount[n.name] ?? 0) >= 2 ? (() => { const a = outAnchor(n.name); const o = 18.5; return <Gateway x={dir === 'tb' ? a.x : a.x + o} y={dir === 'tb' ? a.y + o : a.y} symbol="X" />; })() : null}
+                {joinIn[n.name] ? (() => { const a = inAnchor(n.name); const o = 18.5; return <Gateway x={dir === 'tb' ? a.x : a.x - o} y={dir === 'tb' ? a.y - o : a.y} symbol={joinIn[n.name] === 'or' ? 'O' : '‖'} />; })() : null}
                 <text x={p.x + 10} y={p.y + 22} fontSize={12.5} fontWeight={600} fill="var(--foreground, #e2e8f0)">
                   {(n.type === 'SYSTEM' ? '⚙ ' : '👤 ') + n.name}
                 </text>

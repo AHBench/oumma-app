@@ -125,6 +125,16 @@ export function DesignerChat(args: {
       void ask(`The tool "${call.name}" is not available. Use only the documented tools.`, round);
       return;
     }
+    if (!call && answer.includes('```tool')) {
+      // The model emitted a tool block we could not parse (truncated / invalid
+      // JSON). Never drop it silently — make the model re-emit a valid block.
+      void ask(
+        'Your previous message contained a ```tool block that could not be parsed as valid JSON. ' +
+        'Re-emit the SAME action as one complete, valid ```tool JSON block ("name" + "args"), or a plain answer if no action is needed.',
+        round,
+      );
+      return;
+    }
     if (!call || !tool) return;
     if (round >= MAX_ROUNDS) {
       push('assistant', t('designChatRoundLimit'));

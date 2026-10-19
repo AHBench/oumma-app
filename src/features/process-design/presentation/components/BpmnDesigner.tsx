@@ -39,6 +39,7 @@ interface DNode {
   description?: string;
   tool?: string;
   url?: string;
+  method?: string;
 }
 
 type LayoutDir = 'lr' | 'tb' | 'circular' | 'force';
@@ -90,6 +91,7 @@ function normTasks(def: Json | null): DNode[] {
         description: t.description ? String(t.description) : undefined,
         tool: t.tool ? String(t.tool) : undefined,
         url: t.url ? String(t.url) : undefined,
+        method: t.method ? String(t.method) : undefined,
       };
     })
     .filter((t) => t.name !== '');
@@ -251,6 +253,18 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   const [showAdd, setShowAdd] = useState<null | 'human' | 'system' | 'end'>(null);
   const [addName, setAddName] = useState('');
   const [addGroup, setAddGroup] = useState('');
+  // Edge configuration (exhaustive connection editor).
+  const [edgeCond, setEdgeCond] = useState('');
+  const [edgeFork, setEdgeFork] = useState(false);
+  const [edgeJoin, setEdgeJoin] = useState<'and' | 'or'>('and');
+  // SYSTEM task tool configuration.
+  const [toolUrl, setToolUrl] = useState('');
+  const [toolMethod, setToolMethod] = useState('POST');
+  // AI design validation.
+  const [validating, setValidating] = useState(false);
+  const [validation, setValidation] = useState<string | null>(null);
+  const [valOpen, setValOpen] = useState(false);
+  const pendingSelEdge = useRef<{ to: string; from?: string; joinFrom?: string[] } | null>(null);
   const [view, setView] = useState({ x: 20, y: 20, k: 1 });
   const svgRef = useRef<SVGSVGElement>(null);
   const drag = useRef<{ sx: number; sy: number; vx: number; vy: number } | null>(null);
@@ -279,6 +293,26 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
     return m;
   }, [edges]);
   const hasStart = useMemo(() => nodes.some((n) => n.type === 'START'), [nodes]);
+  // Parallel forks (source) and joins (target) for the gateway diamonds.
+  const forkOut = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    for (const e of edges) if (e.from && e.fork) m[e.from] = true;
+    return m;
+  }, [edges]);
+  const joinIn = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const e of edges) if (e.joinFrom) m[e.to] = e.join ?? 'and';
+    return m;
+  }, [edges]);
+  // Resolve a just-created edge into a selection once the refetch lands.
+  useEffect(() => {
+    if (!pendingSelEdge.current) return;
+    const p = pendingSelEdge.current;
+    const e = edges.find((x) => x.to === p.to && (p.joinFrom
+      ? (x.joinFrom ?? []).length > 0 && p.joinFrom!.every((f) => (x.joinFrom ?? []).includes(f))
+      : x.from === p.from));
+    if (e) { setSelected({ kind: 'edge', id: e.key }); pendingSelEdge.current = null; }
+  }, [edges]);
 
 
   // Free placement: the user can drag any step anywhere to untangle a
@@ -299,17 +333,28 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   // whatever the user is typing (the "can't modify" bug).
   const lastSynced = useRef<string | null>(null);
   useEffect(() => {
-    if (selected?.kind !== 'node') { lastSynced.current = null; return; }
-    if (lastSynced.current === selected.id) return;
-    const n = nodes.find((x) => x.name === selected.id);
-    if (!n) { lastSynced.current = null; return; }
-    setRenameVal(n.name);
-    setGroupVal(n.group ?? '');
-    setDescVal(n.description ?? '');
-    setJoinPick([]);
-    setShowJoin(false);
-    lastSynced.current = selected.id;
-  }, [selected, nodes]);
+    if (lastSynced.current === selected?.id) return;
+    lastSynced.current = selected?.id ?? null;
+    if (selected?.kind === 'node') {
+      const n = nodes.find((x) => x.name === selected.id);
+      if (!n) return;
+      setRenameVal(n.name);
+      setGroupVal(n.group ?? '');
+      setDescVal(n.description ?? '');
+      setToolUrl(n.url ?? '');
+      setToolMethod(n.method ?? 'POST');
+      setJoinPick([]);
+      setShowJoin(false);
+      return;
+    }
+    if (selected?.kind === 'edge') {
+      const e = edges.find((x) => x.key === selected.id);
+      if (!e) return;
+      setEdgeCond(e.condition && e.condition !== 'always' ? e.condition : '');
+      setEdgeFork(!!e.fork);
+      setEdgeJoin((e.join as 'and' | 'or') ?? 'and');
+    }
+  }, [selected, nodes, edges]);
 
   const act = useCallback(async (fn: () => Promise<unknown>, err: (m: string) => void) => {
     try {
@@ -403,6 +448,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
       const mode = tool;
       setConnectFrom(null);
       setTool(null);
+      pendingSelEdge.current = { to: n.name, from: src }; // open the connection's config
       if (mode === 'fork') {
         void act(() => ds.addEdge(processId, { from: src, to: n.name, fork: true }, token ?? ''), alertErr);
       } else {
@@ -494,7 +540,26 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                 </div>
               </>
             ) : null}
-            {/* connect */}
+            {/* tool (system) task: HTTP/tool endpoint configuration */}
+            {selectedNode.type === 'SYSTEM' ? (
+              <>
+                <label className="text-(--app-fs-tiny, 0.7rem) text-muted">{t('bpmnToolUrl')}</label>
+                <input value={toolUrl} onChange={(e) => setToolUrl(e.target.value)} placeholder="https://…"
+                  className="min-w-0 flex-1 rounded border border-separator bg-surface px-2 py-1 text-(--app-fs-small)" />
+                <div className="flex gap-1">
+                  <select value={toolMethod} onChange={(e) => setToolMethod(e.target.value)}
+                    className="rounded border border-separator bg-surface px-2 py-1 text-(--app-fs-small)">
+                    {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <button type="button"
+                    disabled={toolUrl.trim() === (selectedNode.url ?? '') && toolMethod === (selectedNode.method ?? 'POST')}
+                    onClick={() => void act(() => ds.setTaskConfig(processId, selectedNode.name, { url: toolUrl.trim(), method: toolMethod }, token ?? ''), alertErr)}
+                    className="rounded-(--app-radius) border border-separator px-2 py-1 text-(--app-fs-small) hover:bg-surface disabled:opacity-40">
+                    {t('bpmnSave')}
+                  </button>
+                </div>
+              </>
+            ) : null}
             <div className="border-t border-separator pt-2">
               {connectFrom === selectedNode.name ? (
                 <span className="text-(--app-fs-small) text-(--accent)">{t('bpmnConnectActive')}
@@ -555,9 +620,48 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
               {selectedEdge.from ? `${selectedEdge.from} → ${selectedEdge.to}` : `${(selectedEdge.joinFrom ?? []).join(', ')} ⊥ ${selectedEdge.to}`}
             </div>
             <div className="text-(--app-fs-tiny, 0.7rem) text-muted">
-              {selectedEdge.fork ? t('bpmnFork') : selectedEdge.joinFrom ? `${t('bpmnJoin')} (${selectedEdge.join ?? 'and'})` : ''}
+              {selectedEdge.fork ? t('bpmnFork') : selectedEdge.joinFrom ? `${t('bpmnJoin')} (${selectedEdge.join ?? 'and'})` : t('bpmnConnection')}
             </div>
-            <div className="text-(--app-fs-tiny, 0.7rem) text-muted">{selectedEdge.condition ?? 'always'}</div>
+            {/* branch condition (editable) */}
+            <label className="text-(--app-fs-tiny, 0.7rem) text-muted">{t('bpmnCondition')}</label>
+            <div className="flex gap-1">
+              <input value={edgeCond} onChange={(e) => setEdgeCond(e.target.value)} placeholder="always"
+                className="min-w-0 flex-1 rounded border border-separator bg-surface px-2 py-1 text-(--app-fs-small)" />
+              <button type="button" disabled={edgeCond.trim() === ((selectedEdge.condition && selectedEdge.condition !== 'always' ? selectedEdge.condition : ''))}
+                onClick={() => void act(() => ds.updateEdge(processId, { from: selectedEdge.from, to: selectedEdge.to, condition: edgeCond.trim() }, token ?? ''), alertErr)}
+                className="rounded-(--app-radius) border border-separator px-2 py-1 text-(--app-fs-small) hover:bg-surface disabled:opacity-40">
+                {t('bpmnSave')}
+              </button>
+            </div>
+            {/* parallel fork toggle (plain edges only) */}
+            {!selectedEdge.joinFrom ? (
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1 text-(--app-fs-tiny, 0.7rem) text-muted">
+                  <input type="checkbox" checked={edgeFork} onChange={(e) => setEdgeFork(e.target.checked)} />
+                  {t('bpmnFork')}
+                </label>
+                <button type="button" disabled={edgeFork === selectedEdge.fork}
+                  onClick={() => void act(() => ds.updateEdge(processId, { from: selectedEdge.from, to: selectedEdge.to, fork: edgeFork }, token ?? ''), alertErr)}
+                  className="rounded-(--app-radius) border border-separator px-2 py-1 text-(--app-fs-small) hover:bg-surface disabled:opacity-40">
+                  {t('bpmnSave')}
+                </button>
+              </div>
+            ) : null}
+            {/* join kind (join edges only) */}
+            {selectedEdge.joinFrom ? (
+              <div className="flex items-center gap-2">
+                <select value={edgeJoin} onChange={(e) => setEdgeJoin(e.target.value as 'and' | 'or')}
+                  className="min-w-0 flex-1 rounded border border-separator bg-surface px-2 py-1 text-(--app-fs-small)">
+                  <option value="and">AND (parallel)</option>
+                  <option value="or">OR (inclusive)</option>
+                </select>
+                <button type="button" disabled={edgeJoin === (selectedEdge.join ?? 'and')}
+                  onClick={() => void act(() => ds.updateEdge(processId, { to: selectedEdge.to, join: edgeJoin }, token ?? ''), alertErr)}
+                  className="rounded-(--app-radius) border border-separator px-2 py-1 text-(--app-fs-small) hover:bg-surface disabled:opacity-40">
+                  {t('bpmnSave')}
+                </button>
+              </div>
+            ) : null}
             <button type="button" onClick={() => {
               if (!confirm(t('bpmnDeleteEdgeConfirm'))) return;
               void act(() => ds.deleteEdge(processId, selectedEdge.from, selectedEdge.to, token ?? ''), alertErr);
@@ -568,10 +672,78 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
           </>
         ) : null;
 
+  // AI design validation: asks the designer LLM to review the current design.
+  const runValidation = async () => {
+    if (!processId || !token) return;
+    setValidating(true);
+    setValOpen(true);
+    setValidation(null);
+    try {
+      const answer = await ds.designAsk({
+        processId,
+        prompt: 'Act as a strict BPMN 2.0 reviewer. Review this process design (tasks + topology) and report, as concise bullet points: (1) anomalies — unreachable tasks, tasks with no outgoing edge that are not END, END nodes with no incoming edge, joins with fewer than two branches, ambiguous or contradictory branch conditions, tasks missing a responsible role, roles declared but unused, naming inconsistencies; (2) improvement suggestions (max 5). If the design is healthy, say so in one line. Do NOT call any tools. Respond in plain text only, no markdown code blocks.',
+      }, token);
+      setValidation(answer.trim() || '—');
+    } catch (e) {
+      setValidation(e instanceof Error ? e.message : String(e));
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  // BPMN toolbox buttons — rendered in the right-hand vertical strip.
+  const toolBtn = (title: string, active: boolean, onClick: () => void, icon: React.ReactNode, disabled = false) => (
+    <button type="button" title={title} onClick={onClick} disabled={disabled}
+      className={tb + (active ? tbActive : '') + (disabled ? ' cursor-not-allowed opacity-40' : '')}>{icon}</button>
+  );
+  const toolboxButtons = (
+    <>
+      {toolBtn(t('bpmnStart'), false, () => { void act(() => ds.addTask(processId, { name: 'start', type: 'START' }, token ?? ''), alertErr); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="var(--success, #16a34a)" strokeWidth="2" /></svg>, hasStart)}
+      {toolBtn(t('bpmnEnd'), showAdd === 'end', () => { setShowAdd(showAdd === 'end' ? null : 'end'); setAddName(t('bpmnEndName')); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="5.5" fill="none" stroke="var(--danger, #dc2626)" strokeWidth="3.5" /></svg>)}
+      {toolBtn(t('bpmnHuman'), showAdd === 'human', () => { setShowAdd(showAdd === 'human' ? null : 'human'); setAddName(''); setAddGroup(roles[0] ?? ''); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="9" r="1.9" fill="currentColor" /><path d="M6.6 13.6c.3-1.9 1.7-2.8 3.4-2.8s3.1.9 3.4 2.8" fill="currentColor" /></svg>)}
+      {toolBtn(t('bpmnToolTask'), showAdd === 'system', () => { setShowAdd(showAdd === 'system' ? null : 'system'); setAddName(''); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.2v1.6M10 12.2v1.6M6.2 10h1.6M12.2 10h1.6" stroke="currentColor" strokeWidth="1.4" /></svg>)}
+      <span className="my-0.5 w-6 shrink-0 border-t border-separator" />
+      {toolBtn(t('bpmnExclusive'), tool === 'exclusive', () => { const next = tool === 'exclusive' ? null : 'exclusive'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7.6 7.6 12.4 12.4M12.4 7.6 7.6 12.4" stroke="currentColor" strokeWidth="1.4" /></svg>)}
+      {toolBtn(t('bpmnForkTool'), tool === 'fork', () => { const next = tool === 'fork' ? null : 'fork'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.5v7M6.5 10h7" stroke="currentColor" strokeWidth="1.4" /></svg>)}
+      {toolBtn(t('bpmnJoinAnd'), tool === 'joinAnd', () => { const next = tool === 'joinAnd' ? null : 'joinAnd'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7 8.4h6M7 11.6h6" stroke="currentColor" strokeWidth="1.4" /></svg>)}
+      {toolBtn(t('bpmnJoinOr'), tool === 'joinOr', () => { const next = tool === 'joinOr' ? null : 'joinOr'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); },
+        <svg width="20" height="20" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>)}
+    </>
+  );
+
+  // Gateway diamonds, drawn at a node's output/input anchor.
+  const Gateway = ({ x, y, symbol }: { x: number; y: number; symbol: string }) => (
+    <g>
+      <rect x={x - 13} y={y - 13} width={26} height={26} transform={`rotate(45 ${x} ${y})`}
+        fill="var(--app-bg, #0b1220)" stroke="var(--accent, #6366f1)" strokeWidth={1.8} />
+      <text x={x} y={y + 4} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--accent, #6366f1)">{symbol}</text>
+    </g>
+  );
+  const outAnchor = (name: string) => {
+    const p = nodeAt(name);
+    return dir === 'tb' ? { x: p.x + NODE_W / 2, y: p.y + NODE_H } : { x: p.x + NODE_W, y: p.y + NODE_H / 2 };
+  };
+  const inAnchor = (name: string) => {
+    const p = nodeAt(name);
+    return dir === 'tb' ? { x: p.x + NODE_W / 2, y: p.y } : { x: p.x, y: p.y + NODE_H / 2 };
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-2" dir="ltr">
       {/* Toolbar */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-separator pb-2">
+        <span className="text-(--app-fs-base, 0.95rem) font-semibold">{t('bpmnDiagramTitle')}</span>
+        <button type="button" onClick={() => void runValidation()} disabled={validating}
+          className="rounded-(--app-radius) border border-separator px-3 py-1 text-(--app-fs-small) hover:bg-surface disabled:opacity-50">
+          {validating ? t('bpmnValidating') : `✦ ${t('bpmnValidate')}`}
+        </button>
         <select value={dir} onChange={(e) => pickDir(e.target.value as LayoutDir)}
           className="rounded border border-separator bg-surface px-2 py-1 text-(--app-fs-small) text-foreground">
           <option value="lr">{t('layoutLR')}</option>
@@ -579,51 +751,6 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
           <option value="circular">{t('layoutCircular')}</option>
           <option value="force">{t('layoutForce')}</option>
         </select>
-        {/* BPMN toolbox — every notation the design model supports, as icons */}
-        <div className="flex items-center gap-1 rounded-(--app-radius) border border-separator p-1" title={t('bpmnToolbox')}>
-          <button type="button" title={t('bpmnStart')}
-            disabled={hasStart}
-            onClick={() => void act(() => ds.addTask(processId, { name: 'start', type: 'START' }, token ?? ''), alertErr)}
-            className="flex h-7 w-7 items-center justify-center rounded hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40">
-            <svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="none" stroke="var(--success, #16a34a)" strokeWidth="2" /></svg>
-          </button>
-          <button type="button" title={t('bpmnEnd')}
-            onClick={() => { setShowAdd(showAdd === 'end' ? null : 'end'); setAddName(t('bpmnEndName')); }}
-            className={tb + (showAdd === 'end' ? tbActive : '')}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="5.5" fill="none" stroke="var(--danger, #dc2626)" strokeWidth="3.5" /></svg>
-          </button>
-          <button type="button" title={t('bpmnHuman')}
-            onClick={() => { setShowAdd(showAdd === 'human' ? null : 'human'); setAddName(''); setAddGroup(roles[0] ?? ''); }}
-            className={tb + (showAdd === 'human' ? tbActive : '')}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="9" r="1.9" fill="currentColor" /><path d="M6.6 13.6c.3-1.9 1.7-2.8 3.4-2.8s3.1.9 3.4 2.8" fill="currentColor" /></svg>
-          </button>
-          <button type="button" title={t('bpmnToolTask')}
-            onClick={() => { setShowAdd(showAdd === 'system' ? null : 'system'); setAddName(''); }}
-            className={tb + (showAdd === 'system' ? tbActive : '')}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><rect x="2" y="4.5" width="16" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.2v1.6M10 12.2v1.6M6.2 10h1.6M12.2 10h1.6" stroke="currentColor" strokeWidth="1.4" /></svg>
-          </button>
-          <span className="mx-0.5 h-5 w-px bg-separator" />
-          <button type="button" title={t('bpmnExclusive')}
-            onClick={() => { const next = tool === 'exclusive' ? null : 'exclusive'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
-            className={tb + (tool === 'exclusive' ? tbActive : '')}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7.6 7.6 12.4 12.4M12.4 7.6 7.6 12.4" stroke="currentColor" strokeWidth="1.4" /></svg>
-          </button>
-          <button type="button" title={t('bpmnForkTool')}
-            onClick={() => { const next = tool === 'fork' ? null : 'fork'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
-            className={tb + (tool === 'fork' ? tbActive : '')}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M10 6.5v7M6.5 10h7" stroke="currentColor" strokeWidth="1.4" /></svg>
-          </button>
-          <button type="button" title={t('bpmnJoinAnd')}
-            onClick={() => { const next = tool === 'joinAnd' ? null : 'joinAnd'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
-            className={tb + (tool === 'joinAnd' ? tbActive : '')}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><path d="M7 8.4h6M7 11.6h6" stroke="currentColor" strokeWidth="1.4" /></svg>
-          </button>
-          <button type="button" title={t('bpmnJoinOr')}
-            onClick={() => { const next = tool === 'joinOr' ? null : 'joinOr'; setTool(next); setConnectFrom(null); setJoinTarget(null); setJoinPick([]); }}
-            className={tb + (tool === 'joinOr' ? tbActive : '')}>
-            <svg width="18" height="18" viewBox="0 0 20 20"><path d="M10 2 18 10 10 18 2 10Z" fill="none" stroke="currentColor" strokeWidth="1.4" /><circle cx="10" cy="10" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.4" /></svg>
-          </button>
-        </div>
         {Object.keys(posOvr).length > 0 ? (
           <button type="button" onClick={clearPosOvr}
             className="rounded-(--app-radius) border border-separator px-3 py-1 text-(--app-fs-small) hover:bg-surface">
@@ -642,11 +769,14 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
             ) : null}
             <button type="button" onClick={() => {
               if (!addName.trim()) return;
-              void act(() => (showAdd === 'human'
-                ? ds.addTask(processId, { name: addName.trim(), group: addGroup }, token ?? '')
-                : showAdd === 'end'
-                  ? ds.addTask(processId, { name: addName.trim(), type: 'END' }, token ?? '')
-                  : ds.addSystemTask(processId, { name: addName.trim() }, token ?? '')), alertErr);
+              const name = addName.trim();
+              const addKind = showAdd;
+              void act(() => (addKind === 'human'
+                ? ds.addTask(processId, { name, group: addGroup }, token ?? '')
+                : addKind === 'end'
+                  ? ds.addTask(processId, { name, type: 'END' }, token ?? '')
+                  : ds.addSystemTask(processId, { name }, token ?? '')), alertErr)
+                .then(() => setSelected({ kind: 'node', id: name })); // open its config panel
               setShowAdd(null);
             }} className="rounded-(--app-radius) bg-(--accent) px-2 py-1 text-(--app-fs-small) font-medium text-white">
               {t('bpmnAdd')}
@@ -670,6 +800,7 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                   const srcs = joinPick;
                   const or = tool === 'joinOr';
                   setJoinTarget(null); setJoinPick([]); setTool(null);
+                  pendingSelEdge.current = { to, joinFrom: srcs };
                   void act(() => ds.addEdge(processId, { join_from: srcs, to, join: or ? 'or' : 'and' }, token ?? ''), alertErr);
                 }}
                 className="rounded-(--app-radius) bg-(--accent) px-2 py-1 font-medium text-white disabled:opacity-40">
@@ -682,8 +813,18 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
         ) : null}
       </div>
 
-      {/* Canvas + right-hand configuration panel (split view): clicking a
-          step or connection loads its configuration into the panel. */}
+      {/* AI design-review result */}
+      {valOpen ? (
+        <div className="max-h-52 shrink-0 overflow-y-auto rounded-(--app-radius) border border-separator bg-surface p-2 text-(--app-fs-small)">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="font-semibold">✦ {t('bpmnValidationTitle')}</span>
+            <button type="button" onClick={() => setValOpen(false)} className="rounded px-1.5 py-0.5 hover:bg-surface">✕</button>
+          </div>
+          <div className="whitespace-pre-wrap">{validating ? t('bpmnValidating') : validation}</div>
+        </div>
+      ) : null}
+
+      {/* Canvas + right-hand configuration panel + vertical BPMN toolbox */}
       <div className="flex min-h-0 min-w-0 flex-1 gap-2">
       <svg
         ref={svgRef}
@@ -715,22 +856,6 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                     strokeWidth={isSel ? 2.5 : 1.5}
                     strokeDasharray={e.fork || e.joinFrom ? '7 5' : undefined}
                     markerEnd="url(#bpmn-arrow)" />
-                  {/* gateway marks */}
-                  {e.fork ? (
-                    <g>
-                      <rect x={parseFloat(path.slice(2).split(' ')[0]) + 26 - 7} y={parseFloat(path.slice(2).split(' ')[1]) - 7} width={14} height={14} transform={`rotate(45 ${parseFloat(path.slice(2).split(' ')[0]) + 26} ${parseFloat(path.slice(2).split(' ')[1])})`}
-                        fill="none" stroke="var(--accent, #6366f1)" strokeWidth={1.5} />
-                      <text x={parseFloat(path.slice(2).split(' ')[0]) + 26} y={parseFloat(path.slice(2).split(' ')[1]) + 4} textAnchor="middle" fontSize={10} fill="var(--accent, #6366f1)">+</text>
-                    </g>
-                  ) : null}
-                  {e.joinFrom ? (
-                    <g>
-                      <rect x={parseFloat(path.match(/C [\d.]+ [\d.]+, [\d.]+ [\d.]+, ([\d.]+) ([\d.]+)/)?.[1] ?? '0') - 12} y={parseFloat(path.match(/C [\d.]+ [\d.]+, [\d.]+ [\d.]+, ([\d.]+) ([\d.]+)/)?.[2] ?? '0') - 7} width={14} height={14}
-                        transform={`rotate(45 ${parseFloat(path.match(/C [\d.]+ [\d.]+, [\d.]+ [\d.]+, ([\d.]+) ([\d.]+)/)?.[1] ?? '0') - 5} ${parseFloat(path.match(/C [\d.]+ [\d.]+, [\d.]+ [\d.]+, ([\d.]+) ([\d.]+)/)?.[2] ?? '0')})`}
-                        fill="none" stroke="var(--accent, #6366f1)" strokeWidth={1.5} />
-                      <text x={parseFloat(path.match(/C [\d.]+ [\d.]+, [\d.]+ [\d.]+, ([\d.]+) ([\d.]+)/)?.[1] ?? '0') - 5} y={parseFloat(path.match(/C [\d.]+ [\d.]+, [\d.]+ [\d.]+, ([\d.]+) ([\d.]+)/)?.[2] ?? '0') + 4} textAnchor="middle" fontSize={10} fill="var(--accent, #6366f1)">‖</text>
-                    </g>
-                  ) : null}
                   {e.condition && e.condition !== 'always' ? (
                     <text x={mx} y={my - 8} textAnchor="middle" fontSize={10} fill="var(--text-muted, #94a3b8)">
                       {e.condition.length > 28 ? `${e.condition.slice(0, 27)}…` : e.condition}
@@ -767,13 +892,11 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
                   strokeWidth={isSel ? 2.5 : 1.2}
                   strokeDasharray={n.type === 'SYSTEM' && !n.tool && !n.url ? '6 4' : undefined} />
                 {isTarget ? <rect x={p.x - 4} y={p.y - 4} width={NODE_W + 8} height={NODE_H + 8} rx={13} fill="none" stroke="var(--accent, #6366f1)" strokeWidth={2} strokeDasharray="5 4" /> : null}
-                {/* exclusive-gateway mark: this node branches on conditions */}
-                {(outCount[n.name] ?? 0) >= 2 ? (
-                  <g>
-                    <rect x={p.x + NODE_W - 16} y={p.y - 8} width={13} height={13} transform={`rotate(45 ${p.x + NODE_W - 9.5} ${p.y - 1.5})`} fill="var(--surface, #1e293b)" stroke="var(--accent, #6366f1)" strokeWidth={1.3} />
-                    <text x={p.x + NODE_W - 9.5} y={p.y + 1.5} textAnchor="middle" fontSize={7.5} fontWeight={700} fill="var(--accent, #6366f1)">X</text>
-                  </g>
-                ) : null}
+                {/* BPMN gateway diamonds: exclusive (X) / parallel fork (+) at the
+                    output anchor; parallel (‖) / inclusive (O) joins at the input. */}
+                {forkOut[n.name] ? (() => { const a = outAnchor(n.name); return <Gateway x={a.x + 16} y={a.y} symbol="+" />; })() : null}
+                {!forkOut[n.name] && (outCount[n.name] ?? 0) >= 2 ? (() => { const a = outAnchor(n.name); return <Gateway x={a.x + 16} y={a.y} symbol="X" />; })() : null}
+                {joinIn[n.name] ? (() => { const a = inAnchor(n.name); return <Gateway x={a.x - 16} y={a.y} symbol={joinIn[n.name] === 'or' ? 'O' : '‖'} />; })() : null}
                 <text x={p.x + 10} y={p.y + 22} fontSize={12.5} fontWeight={600} fill="var(--foreground, #e2e8f0)">
                   {(n.type === 'SYSTEM' ? '⚙ ' : '👤 ') + n.name}
                 </text>
@@ -800,6 +923,10 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
           </div>
         </aside>
       ) : null}
+      {/* Vertical BPMN toolbox (right side of the design window) */}
+      <div className="flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto rounded-(--app-radius) border border-separator p-1" title={t('bpmnToolbox')}>
+        {toolboxButtons}
+      </div>
       </div>
     </div>
   );

@@ -720,5 +720,12 @@
   "bpmnJoinOr": "Jointure inclusive (OU)",
   "bpmnJoinTargetHint": "Jointure : cliquez sur l'étape de regroupement",
   "bpmnJoinSourcesHint": "Jointure vers « {{to}} » : cliquez sur les étapes sources ({{n}} sélectionnée(s))",
-  "bpmnFinishJoin": "Terminer la jointure"
+  "bpmnFinishJoin": "Terminer la jointure",
+  "bpmnDiagramTitle": "Diagramme du processus",
+  "bpmnValidate": "Valider le design (IA)",
+  "bpmnValidating": "Validation…",
+  "bpmnValidationTitle": "Revue IA du design",
+  "bpmnCondition": "Condition de branche",
+  "bpmnConnection": "Connexion",
+  "bpmnToolUrl": "Endpoint de l'outil (URL)"
 }

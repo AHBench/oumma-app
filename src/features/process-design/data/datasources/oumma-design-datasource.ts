@@ -270,6 +270,33 @@ export class OummaDesignDataSource {
     }
   }
 
+  /** POST /api/management/design/{pid}/update-edge — edit an existing edge
+   *  (condition, fork flag, join kind). Plain edges match on from+to. */
+  async updateEdge(
+    processId: string,
+    payload: {
+      from?: string;
+      to: string;
+      condition?: string;
+      fork?: boolean;
+      join?: string;
+      join_from?: string[];
+    },
+    token: string,
+  ): Promise<Json> {
+    try {
+      const res = await apiClient.post(
+        `${base(this.oummaUrl)}/api/management/design/${encodeURIComponent(processId)}/update-edge`,
+        payload,
+        this.auth(token),
+      );
+      return res.data as Json;
+    } catch (e) {
+      checkLicense(e);
+      throw new Error(`updateEdge: ${getErrorMessage(e)}`);
+    }
+  }
+
   /** POST /api/management/design/{pid}/delete-task — remove a task + every
    *  topology reference to it (start/end are protected). */
   async deleteTask(processId: string, task: string, token: string): Promise<Json> {

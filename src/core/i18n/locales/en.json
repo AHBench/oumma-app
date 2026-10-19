@@ -720,5 +720,12 @@
   "bpmnJoinOr": "Inclusive join (OR)",
   "bpmnJoinTargetHint": "Join: click the step the branches join into",
   "bpmnJoinSourcesHint": "Join into \"{{to}}\": click its source steps ({{n}} selected)",
-  "bpmnFinishJoin": "Finish join"
+  "bpmnFinishJoin": "Finish join",
+  "bpmnDiagramTitle": "Process Diagram",
+  "bpmnValidate": "Validate design (AI)",
+  "bpmnValidating": "Validating…",
+  "bpmnValidationTitle": "AI design review",
+  "bpmnCondition": "Branch condition",
+  "bpmnConnection": "Connection",
+  "bpmnToolUrl": "Tool endpoint (URL)"
 }

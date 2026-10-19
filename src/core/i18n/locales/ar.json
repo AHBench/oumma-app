@@ -720,5 +720,12 @@
   "bpmnJoinOr": "دمج شامل (أو)",
   "bpmnJoinTargetHint": "الدمج: انقر على خطوة التجميع",
   "bpmnJoinSourcesHint": "دمج إلى «{{to}}»: انقر على الخطوات المصدر ({{n}} محددة)",
-  "bpmnFinishJoin": "إنهاء الدمج"
+  "bpmnFinishJoin": "إنهاء الدمج",
+  "bpmnDiagramTitle": "مخطط العملية",
+  "bpmnValidate": "التحقق من التصميم (ذكاء اصطناعي)",
+  "bpmnValidating": "جارٍ التحقق…",
+  "bpmnValidationTitle": "مراجعة التصميم بالذكاء",
+  "bpmnCondition": "شرط الفرع",
+  "bpmnConnection": "اتصال",
+  "bpmnToolUrl": "نقطة وصول الأداة (URL)"
 }

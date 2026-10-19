@@ -26,6 +26,23 @@ interface PendingCall {
 
 const MAX_ROUNDS = 4;
 
+/** Load a process's persisted designer-chat messages (isolated per process). */
+function loadChat(key: string): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const arr: unknown = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(
+      (m): m is ChatMessage =>
+        !!m && typeof m === 'object' && typeof (m as ChatMessage).content === 'string'
+        && ['user', 'assistant', 'tool'].includes((m as ChatMessage).role),
+    );
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Designer chat (B-1): prompts go to `POST /api/management/design/ask`;
  * tool calls arrive as ```tool fenced blocks and are executed client-side —
@@ -40,7 +57,11 @@ export function DesignerChat(args: {
 }) {
   const { processId, token, lang, ds } = args;
   const { t } = useTranslation();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Each process has its OWN chat: conversations are isolated per process
+  // and persisted in localStorage, so switching processes swaps in that
+  // process's history instead of leaking the previous one.
+  const storageKey = `designer-chat:${processId}`;
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadChat(storageKey));
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PendingCall | null>(null);
@@ -55,6 +76,22 @@ export function DesignerChat(args: {
   const tools = designTools(ds);
   const navigate = useNavigate();
   const history = useRef<{ role: string; content: string }[]>([]);
+
+  // Process switched → load THAT process's own conversation, drop transient state.
+  useEffect(() => {
+    setMessages(loadChat(storageKey));
+    setPending(null);
+    setError(null);
+    setInput('');
+    history.current = [];
+  }, [storageKey]);
+
+  // Persist this process's conversation (capped) as it grows.
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(messages.slice(-50)));
+    } catch { /* storage unavailable */ }
+  }, [messages, storageKey]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });

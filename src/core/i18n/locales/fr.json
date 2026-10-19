@@ -740,5 +740,7 @@
   "versionViewDescription": "Description",
   "versionViewTools": "Tâches outillées (système)",
   "versionViewToolCol": "Outil",
-  "versionsViewHint": "Tous les onglets affichent cette version — lecture seule. Fermer pour revenir au design en cours."
+  "versionsViewHint": "Tous les onglets affichent cette version — lecture seule. Fermer pour revenir au design en cours.",
+  "versionsOpenCurrent": "Ouvrir l'actuelle",
+  "versionsOpenCurrentHint": "Revenir au design actif éditable"
 }

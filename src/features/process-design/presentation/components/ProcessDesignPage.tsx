@@ -476,6 +476,15 @@ export function ProcessDesignPage() {
                           <Badge label={String(v.status)} on={String(v.status) === 'active'} />
                           <span className="text-muted">{String(v.created_by ?? '')} · {String(v.created_at ?? '').slice(0, 16).replace('T', ' ')}</span>
                           <span className="text-muted">{t('designMetaTasks')}: {String(v.tasks ?? '?')}</span>
+                          {String(v.status) === 'active' ? (
+                            // The active version IS the live design — opening it
+                            // returns to the editable canvas (not a read-only view).
+                            <button type="button" onClick={() => { setViewVersion(null); setViewDesign(null); }}
+                              title={t('versionsOpenCurrentHint')}
+                              className="rounded-(--app-radius) border border-separator bg-surface px-2 py-0.5 font-medium hover:bg-surface">
+                              {t('versionsOpenCurrent')}
+                            </button>
+                          ) : (
                           <button type="button" onClick={async () => {
                             setViewVersion(Number(v.version));
                             setViewDesign(null);
@@ -487,6 +496,7 @@ export function ProcessDesignPage() {
                             className="rounded-(--app-radius) border border-separator px-2 py-0.5 hover:bg-surface">
                             {t('versionsView')}
                           </button>
+                          )}
                           {String(v.status) !== 'active' && (
                             <button type="button" onClick={async () => {
                               if (!confirm(t('designDeployConfirm'))) return;

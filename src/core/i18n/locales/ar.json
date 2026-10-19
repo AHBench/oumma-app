@@ -740,5 +740,7 @@
   "versionViewDescription": "الوصف",
   "versionViewTools": "مهام الأداة (نظامية)",
   "versionViewToolCol": "الأداة",
-  "versionsViewHint": "جميع التبويبات تعرض هذه الإصدار — للقراءة فقط. أغلق للعودة إلى التصميم الحي."
+  "versionsViewHint": "جميع التبويبات تعرض هذه الإصدار — للقراءة فقط. أغلق للعودة إلى التصميم الحي.",
+  "versionsOpenCurrent": "فتح الحالية",
+  "versionsOpenCurrentHint": "العودة إلى التصميم الحالي القابل للتحرير"
 }

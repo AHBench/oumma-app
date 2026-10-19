@@ -30,6 +30,10 @@ interface BpmnDesignerProps {
   token: string | null;
   roles: string[];
   onSaved: () => void;
+  /** Read-only mode (viewing an old design version): same canvas, no
+      toolbox, no validation, and the configuration panel shows properties
+      without any edit controls. */
+  readOnly?: boolean;
 }
 
 interface DNode {
@@ -225,7 +229,7 @@ function layoutRanked(nodes: DNode[], edges: DEdge[], dir: 'lr' | 'tb'): Map<str
   return pos;
 }
 
-export function BpmnDesigner({ processId, definition, token, roles, onSaved }: BpmnDesignerProps) {
+export function BpmnDesigner({ processId, definition, token, roles, onSaved, readOnly = false }: BpmnDesignerProps) {
   const { t } = useTranslation();
   const ds = getDependencies().designDataSource;
   const [dir, setDir] = useState<LayoutDir>(() => {
@@ -474,7 +478,32 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
   const winTitle = selectedNode?.name ?? (selectedEdge
     ? (selectedEdge.from ? `${selectedEdge.from} → ${selectedEdge.to}` : `${(selectedEdge.joinFrom ?? []).join(', ')} ⊥ ${selectedEdge.to}`)
     : '');
-  const panelInner = selectedNode ? (
+  const panelInner = readOnly
+    ? selectedNode ? (
+        <>
+          <div className="text-(--app-fs-small) font-semibold">{selectedNode.name}</div>
+          <div className="text-(--app-fs-tiny, 0.7rem) text-muted">{selectedNode.type}{selectedNode.tool ? ` · ${selectedNode.tool}` : ''}</div>
+          {selectedNode.group ? <div className="text-(--app-fs-small)"><span className="text-muted">{t('bpmnRole')}: </span>{selectedNode.group}</div> : null}
+          {selectedNode.description ? <div className="text-(--app-fs-small)"><span className="text-muted">{t('bpmnDescription')}: </span>{selectedNode.description}</div> : null}
+          {selectedNode.type === 'SYSTEM' ? (
+            <div className="text-(--app-fs-small)">
+              {selectedNode.url ? <div><span className="text-muted">URL: </span><span className="font-mono">{selectedNode.url}</span></div> : null}
+              {selectedNode.method ? <div><span className="text-muted">Method: </span>{selectedNode.method}</div> : null}
+            </div>
+          ) : null}
+        </>
+      ) : selectedEdge ? (
+        <>
+          <div className="text-(--app-fs-small) font-semibold">
+            {selectedEdge.from ? `${selectedEdge.from} → ${selectedEdge.to}` : `${(selectedEdge.joinFrom ?? []).join(', ')} ⊥ ${selectedEdge.to}`}
+          </div>
+          <div className="text-(--app-fs-tiny, 0.7rem) text-muted">
+            {selectedEdge.fork ? t('bpmnFork') : selectedEdge.joinFrom ? `${t('bpmnJoin')} (${selectedEdge.join ?? 'and'})` : t('bpmnConnection')}
+          </div>
+          <div className="text-(--app-fs-small)"><span className="text-muted">{t('bpmnCondition')}: </span>{selectedEdge.condition ?? 'always'}</div>
+        </>
+      ) : null
+    : selectedNode ? (
           <>
             <div className="text-(--app-fs-small) font-semibold">{selectedNode.name}</div>
             <div className="text-(--app-fs-tiny, 0.7rem) text-muted">
@@ -738,10 +767,12 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
       {/* Toolbar */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-separator pb-2">
         <span className="text-(--app-fs-base, 0.95rem) font-semibold">{t('bpmnDiagramTitle')}</span>
+        {!readOnly ? (
         <button type="button" onClick={() => void runValidation()} disabled={validating}
           className="rounded-(--app-radius) border border-separator px-3 py-1 text-(--app-fs-small) hover:bg-surface disabled:opacity-50">
           {validating ? t('bpmnValidating') : `✦ ${t('bpmnValidate')}`}
         </button>
+        ) : null}
         <select value={dir} onChange={(e) => pickDir(e.target.value as LayoutDir)}
           className="rounded border border-separator bg-surface px-2 py-1 text-(--app-fs-small) text-foreground">
           <option value="lr">{t('layoutLR')}</option>
@@ -933,10 +964,13 @@ export function BpmnDesigner({ processId, definition, token, roles, onSaved }: B
           </div>
         </aside>
       ) : null}
-      {/* Vertical BPMN toolbox (right side of the design window) */}
+      {/* Vertical BPMN toolbox (right side of the design window) — hidden in
+          read-only (viewing an old version) mode. */}
+      {!readOnly ? (
       <div className="flex w-12 shrink-0 flex-col items-center gap-1 overflow-y-auto rounded-(--app-radius) border border-separator p-1" title={t('bpmnToolbox')}>
         {toolboxButtons}
       </div>
+      ) : null}
       </div>
     </div>
   );

@@ -64,6 +64,25 @@ export function ProcessDesignPage() {
   // version's data read-only (VersionView sections); the live document is
   // untouched and no edit controls are rendered.
   const viewing = viewVersion != null && viewDesign != null;
+  // The selected version's document, normalized for the live tab components
+  // (read-only mode renders them exactly like the current version).
+  const vApp = (viewDesign?.app ?? {}) as Json;
+  const versionRoles = ((vApp.roles ?? []) as Json[]).filter((x) => x && typeof x === 'object');
+  const versionSteps: FormStep[] = ((((vApp.forms ?? {}) as Json).steps ?? []) as Json[]).filter((x) => x && typeof x === 'object').map((s) => ({
+    step_id: String(s.step_id ?? ''),
+    launchable: s.launchable === true,
+    form_input: (s.form_input as Record<string, unknown> | null) ?? null,
+    form_fields: (((s.form_fields ?? s.fields ?? []) as Json[]) as unknown as FormStep['form_fields']),
+  }));
+  const versionSearchItems = ((vApp.search_items ?? []) as Json[]).filter((x) => x && typeof x === 'object');
+  const versionTasks: Json[] = (() => {
+    const raw = viewDesign?.tasks;
+    if (Array.isArray(raw)) return raw.filter((x) => x && typeof x === 'object') as Json[];
+    if (raw && typeof raw === 'object') {
+      return Object.entries(raw as Record<string, Json>).map(([name, cfg]) => ({ ...(cfg ?? {}), task_id: (cfg?.task_id as string) ?? name, id: (cfg?.id as string) ?? name }));
+    }
+    return [];
+  })();
 
   // Engine definition (tasks + topology) from /definitions — extract-by-id
   // only returns the app section, so the diagram must use this source.
@@ -163,7 +182,14 @@ export function ProcessDesignPage() {
           <div className="flex min-h-0 flex-1 flex-col rounded-(--app-radius) border border-separator p-3">
             <div className="mb-2 shrink-0 text-(--app-fs-small) font-semibold">{t('designDiagram')}</div>
             {viewing ? (
-              <VersionView design={viewDesign} section="design" />
+              <BpmnDesigner
+                processId={processId ?? ''}
+                definition={viewDesign}
+                token={token}
+                roles={versionRoles.map((r) => String(r.role_id ?? r.role ?? ''))}
+                onSaved={() => undefined}
+                readOnly
+              />
             ) : viewVersion != null ? (
               <p className="text-(--app-fs-small) text-muted">{t('versionsLoading')}</p>
             ) : (
@@ -286,7 +312,12 @@ export function ProcessDesignPage() {
         {designer && tab === 'forms' && (
           <Section title={t('designTabForms')}>
             {viewing ? (
-              <VersionView design={viewDesign} section="forms" />
+              <FormBuilder
+                processId={processId ?? ''}
+                steps={versionSteps}
+                onSaved={() => undefined}
+                readOnly
+              />
             ) : (<>
             <div className="mb-3 rounded-(--app-radius) border border-separator p-2">
               <div className="mb-1 text-(--app-fs-small) font-semibold">{t('formsInitialStep')}</div>
@@ -360,7 +391,14 @@ export function ProcessDesignPage() {
         {designer && tab === 'roles' && (
           <Section title={t('rolesTab')}>
             {viewing ? (
-              <VersionView design={viewDesign} section="roles" />
+              <RolesTab
+                processId={processId ?? ''}
+                token={token ?? ''}
+                ds={ds}
+                roles={versionRoles}
+                onSaved={() => undefined}
+                readOnly
+              />
             ) : (
             <RolesTab
               processId={processId ?? ''}
@@ -376,7 +414,7 @@ export function ProcessDesignPage() {
         {designer && tab === 'search-items' && (
           <Section title={t('searchItemsTab')}>
             {viewing ? (
-              <VersionView design={viewDesign} section="search" />
+              <SearchItemsTab processId={processId ?? ''} staticItems={versionSearchItems} onSaved={() => undefined} readOnly />
             ) : (
             <SearchItemsTab processId={processId ?? ''} onSaved={() => void refetch()} />
             )}
@@ -385,7 +423,7 @@ export function ProcessDesignPage() {
         {designer && tab === 'tools' && (
           <Section title={t('toolsTab')}>
             {viewing ? (
-              <VersionView design={viewDesign} section="tools" />
+              <ToolsTab processId={processId ?? ''} tasks={versionTasks} onSaved={() => undefined} readOnly />
             ) : (
             <ToolsTab processId={processId ?? ''} tasks={defTasks} onSaved={() => void refetch()} />
             )}

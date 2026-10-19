@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getDependencies } from '../../../../core/di';
 import { useAuth } from '../../../auth/presentation/AuthProvider';
@@ -65,10 +65,14 @@ export function FormBuilder({
   processId,
   steps,
   onSaved,
+  readOnly = false,
 }: {
   processId: string;
   steps: FormStep[];
   onSaved: () => void;
+  /** Read-only mode (viewing an old design version): every control is
+      disabled; the step picker stays usable to browse the steps. */
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -93,6 +97,15 @@ export function FormBuilder({
     processId, effectiveStepId, formInput, fields,
   ]);
   const issueText = (v: { key: string; n?: number }) => (v.n != null ? t(v.key, { n: v.n }) : t(v.key));
+
+  // Read-only: open on the first step so the version's form is visible.
+  const autoPicked = useRef(false);
+  useEffect(() => {
+    if (readOnly && !autoPicked.current && steps.length > 0 && !selected) {
+      autoPicked.current = true;
+      choose(steps[0].step_id);
+    }
+  }, [readOnly, steps, selected]);
 
   const choose = (id: string) => {
     setSelected(id);
@@ -175,12 +188,15 @@ export function FormBuilder({
           onChange={(e) => choose(e.target.value)}
           className="min-w-0 flex-1 rounded-(--app-radius) border border-separator bg-surface px-2 py-1.5 text-(--app-fs-small)"
         >
-          <option value="">{t('formBuilderNewStep')}</option>
+          {!readOnly ? <option value="">{t('formBuilderNewStep')}</option> : null}
           {steps.map((s) => (
             <option key={s.step_id} value={s.step_id}>{s.step_id}{s.launchable ? ` (${t('designMetaLaunchable')})` : ''}</option>
           ))}
         </select>
       </div>
+
+      {/* fieldset[disabled] disables every control inside (read-only mode) */}
+      <fieldset disabled={readOnly} className="contents">
 
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-(--app-fs-small) text-muted">
@@ -336,7 +352,7 @@ export function FormBuilder({
       </div>
 
       {/* Validation */}
-      {issues.length > 0 && (
+      {!readOnly && issues.length > 0 && (
         <div className="rounded-(--app-radius) border border-red-500/40 bg-red-500/10 p-2 text-(--app-fs-small) text-red-300">
           {issues.map((iss, i) => <div key={i}>• {issueText(iss)}</div>)}
         </div>
@@ -361,6 +377,7 @@ export function FormBuilder({
           <span className={`text-(--app-fs-small) ${status.kind === 'ok' ? 'text-emerald-400' : 'text-red-400'}`}>{status.text}</span>
         )}
       </div>
+      </fieldset>
     </div>
   );
 }

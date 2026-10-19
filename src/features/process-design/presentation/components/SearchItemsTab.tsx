@@ -14,7 +14,7 @@ const KINDS = ['menu_item', 'tab', 'field_label'] as const;
  * labels for app menu items, form tab titles, process-data fields and form
  * field labels. The app resolves every UI label through this catalog first.
  */
-export function SearchItemsTab({ processId, onSaved }: { processId: string; onSaved: () => void }) {
+export function SearchItemsTab({ processId, onSaved, readOnly = false, staticItems }: { processId: string; onSaved: () => void; /** Read-only mode (viewing an old design version). */ readOnly?: boolean; /** Override the item list (version view). When omitted, fetched live. */ staticItems?: Json[] }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const token = user?.accessToken ?? '';
@@ -61,8 +61,9 @@ export function SearchItemsTab({ processId, onSaved }: { processId: string; onSa
   }, [processId, token, ds]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (staticItems == null) void load();
+    else setItems(staticItems);
+  }, [load, staticItems]);
 
   const upsert = async () => {
     if (!name.trim()) return;
@@ -112,6 +113,7 @@ export function SearchItemsTab({ processId, onSaved }: { processId: string; onSa
 
   return (
     <div className="space-y-4">
+      <fieldset disabled={readOnly} className="contents">
       <div className="rounded-(--app-radius) border border-separator p-3">
         <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
           <input
@@ -230,6 +232,7 @@ export function SearchItemsTab({ processId, onSaved }: { processId: string; onSa
       ) : (
         <p className="text-center text-(--app-fs-small) text-muted">{t('searchItemsEmpty')}</p>
       )}
+      </fieldset>
     </div>
   );
 }

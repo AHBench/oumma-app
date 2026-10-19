@@ -39,8 +39,10 @@ export function RolesTab(args: {
   ds: OummaDesignDataSource;
   roles: Json[];
   onSaved(): void;
+  /** Read-only mode (viewing an old design version). */
+  readOnly?: boolean;
 }) {
-  const { processId, token, ds, roles, onSaved } = args;
+  const { processId, token, ds, roles, onSaved, readOnly = false } = args;
   const { t } = useTranslation();
   const [syncing, setSyncing] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
@@ -91,6 +93,7 @@ export function RolesTab(args: {
 
   return (
     <div className="space-y-3">
+      {!readOnly ? (
       <div className="flex items-center gap-3">
         <button type="button" onClick={() => void sync()} disabled={syncing}
           className="rounded-(--app-radius) bg-(--accent) px-3 py-1.5 text-(--app-fs-small) font-semibold text-white disabled:opacity-50">
@@ -98,6 +101,7 @@ export function RolesTab(args: {
         </button>
         {message ? <span className="text-(--app-fs-small) text-muted">{message}</span> : null}
       </div>
+      ) : null}
 
       {all.length === 0 ? (
         <div className="rounded-(--app-radius) border border-dashed border-separator p-4 text-center text-(--app-fs-small) text-muted">
@@ -114,19 +118,21 @@ export function RolesTab(args: {
                   {d.role_name}
                   <span className="ms-2 text-(--app-fs-small) font-normal text-muted">({d.role_id})</span>
                 </span>
+                {!readOnly ? (
                 <button type="button" onClick={() => void saveRole(role.role_id)}
                   disabled={saving === role.role_id || !dirty}
                   className="rounded-(--app-radius) border border-separator px-3 py-1 text-(--app-fs-small) hover:bg-surface disabled:opacity-40">
                   {saving === role.role_id ? t('rolesSaving') : t('rolesSave')}
                 </button>
+                ) : null}
               </div>
 
               <div className="mb-3 flex flex-wrap gap-4 text-(--app-fs-small)">
-                <Check label={t('rolesCanLaunch')} checked={d.role_can_launch === true}
+                <Check label={t('rolesCanLaunch')} checked={d.role_can_launch === true} disabled={readOnly}
                   onChange={(v) => patch(role.role_id, (r) => { r.role_can_launch = v; })} />
-                <Check label={t('rolesEditInitialForm')} checked={d.can_edit_initial_form === true}
+                <Check label={t('rolesEditInitialForm')} checked={d.can_edit_initial_form === true} disabled={readOnly}
                   onChange={(v) => patch(role.role_id, (r) => { r.can_edit_initial_form = v; })} />
-                <Check label={t('rolesDeptFilter')} checked={d.apply_dept_filter !== false}
+                <Check label={t('rolesDeptFilter')} checked={d.apply_dept_filter !== false} disabled={readOnly}
                   onChange={(v) => patch(role.role_id, (r) => { r.apply_dept_filter = v; })} />
               </div>
 
@@ -144,7 +150,7 @@ export function RolesTab(args: {
                           {ACTION_GROUPS[group].map((action) => {
                             const item = (ga?.action_items ?? []).find((i) => i.action_name === action);
                             return (
-                              <Check key={action} label={action} checked={item?.action_value === true}
+                              <Check key={action} label={action} disabled={readOnly} checked={item?.action_value === true}
                                 onChange={(v) => patch(role.role_id, (r) => {
                                   const rt = (r.role_tasks ?? []).find((x) => x.task_name === task.task_name);
                                   if (!rt) return;
@@ -178,7 +184,7 @@ export function RolesTab(args: {
                     {DOC_PERMS.map((p) => {
                       const item = (dr.doc_permissions ?? []).find((x) => x.id === p);
                       return (
-                        <Check key={p} label={p} checked={item?.permission === true}
+                        <Check key={p} label={p} disabled={readOnly} checked={item?.permission === true}
                           onChange={(v) => patch(role.role_id, (r) => {
                             const x = (r.doc_roles ?? []).find((y) => y.role_id === dr.role_id);
                             if (!x) return;
@@ -198,7 +204,7 @@ export function RolesTab(args: {
                 <div className="flex flex-wrap gap-3 text-(--app-fs-small)">
                   {all.filter((r) => r.role_id !== role.role_id).map((r) => (
                     <Check key={r.role_id} label={r.role_id}
-                      checked={(d.view_access_roles ?? []).includes(r.role_id)}
+                      disabled={readOnly} checked={(d.view_access_roles ?? []).includes(r.role_id)}
                       onChange={(v) => patch(role.role_id, (x) => {
                         const cur = new Set(x.view_access_roles ?? []);
                         if (v) cur.add(r.role_id); else cur.delete(r.role_id);
@@ -215,10 +221,10 @@ export function RolesTab(args: {
   );
 }
 
-function Check(args: { label: string; checked: boolean; onChange(v: boolean): void }) {
+function Check(args: { label: string; checked: boolean; onChange(v: boolean): void; disabled?: boolean }) {
   return (
     <label className="flex cursor-pointer items-center gap-1.5">
-      <input type="checkbox" checked={args.checked} onChange={(e) => args.onChange(e.target.checked)} />
+      <input type="checkbox" disabled={args.disabled} checked={args.checked} onChange={(e) => args.onChange(e.target.checked)} />
       <span>{args.label}</span>
     </label>
   );

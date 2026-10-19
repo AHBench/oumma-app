@@ -24,10 +24,13 @@ export function ToolsTab({
   processId,
   tasks,
   onSaved,
+  readOnly = false,
 }: {
   processId: string;
   tasks: Json[];
   onSaved: () => void;
+  /** Read-only mode (viewing an old design version). */
+  readOnly?: boolean;
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -154,6 +157,7 @@ export function ToolsTab({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+      <fieldset disabled={readOnly} className="contents">
       {/* Existing tool tasks */}
       <div className="rounded-(--app-radius) border border-separator p-3">
         <div className="text-(--app-fs-small) font-semibold">{t('toolTasks')}</div>
@@ -328,6 +332,7 @@ export function ToolsTab({
           ) : null}
         </div>
       </div>
+      </fieldset>
     </div>
   );
 }

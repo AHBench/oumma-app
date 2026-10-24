@@ -742,5 +742,8 @@
   "versionViewToolCol": "Outil",
   "versionsViewHint": "Tous les onglets affichent cette version — lecture seule. Fermer pour revenir au design en cours.",
   "versionsOpenCurrent": "Ouvrir l'actuelle",
-  "versionsOpenCurrentHint": "Revenir au design actif éditable"
+  "versionsOpenCurrentHint": "Revenir au design actif éditable",
+  "humanStepProgress": "Progression des étapes",
+  "systemStepTag": "système",
+  "dismiss": "Fermer"
 }

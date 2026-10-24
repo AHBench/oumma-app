@@ -742,5 +742,8 @@
   "versionViewToolCol": "Tool",
   "versionsViewHint": "All tabs show this version — read-only. Close to return to the live design.",
   "versionsOpenCurrent": "Open current",
-  "versionsOpenCurrentHint": "Return to the live, editable design"
+  "versionsOpenCurrentHint": "Return to the live, editable design",
+  "humanStepProgress": "Step progress",
+  "systemStepTag": "system",
+  "dismiss": "Dismiss"
 }

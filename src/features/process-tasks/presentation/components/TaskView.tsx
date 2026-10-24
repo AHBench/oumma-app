@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ProcessApp } from '../../../process-apps/domain/entities/process-app';
 import type { User } from '../../../auth/domain/entities/user';
 import type { TaskAttachment, TaskGroup, TaskItem } from '../../data/models/task-models';
@@ -14,6 +14,7 @@ import { ProcessProgressPanel } from '../../../process-status/presentation/compo
 import { useWorkspaceContext } from '../../../process-page/presentation/hooks/use-workspace-context';
 import { dedupViewItems, groupRowsByViewItemId } from './task-view-model';
 import { ProcessFieldsSection } from './ProcessFieldsSection';
+import { HumanStepProgress } from './HumanStepProgress';
 import { getDependencies } from '../../../../core/di';
 import { TaskActionButtons } from './TaskActionButtons';
 import { TaskCommentTable } from './TaskCommentTable';
@@ -56,6 +57,7 @@ export function TaskView({ process, user, token, group, task, taskLabels, dossie
   const { groups } = useWorkspaceContext();
   const actions = useTaskActions(process, token);
   const deleteDocument = useDeleteDocument(token);
+  const qc = useQueryClient();
 
   const taskName = String(task.description ?? group.name).replaceAll('_', ' ');
 
@@ -192,6 +194,24 @@ export function TaskView({ process, user, token, group, task, taskLabels, dossie
 
   // Completion state
   const [isCompleting, setIsCompleting] = useState(false);
+  // After a successful completion: which human task was completed — drives
+  // the human→human step-progress strip (live via the polling timeline).
+  const [progressFor, setProgressFor] = useState<string | null>(null);
+
+  // The engine resumes asynchronously after CompleteTask returns: the first
+  // refetch still sees the transient PAUSED state, which stops the usual
+  // timeline polling (settled). Keep the timeline fresh while the progress
+  // strip is open, until the segment settles at the next human step (or
+  // the 60s safety bound).
+  useEffect(() => {
+    if (!progressFor) return;
+    const started = Date.now();
+    const id = window.setInterval(() => {
+      void qc.invalidateQueries({ queryKey: ['process-timeline', process.id, group.id] });
+      if (Date.now() - started > 60_000) window.clearInterval(id);
+    }, 2500);
+    return () => window.clearInterval(id);
+  }, [progressFor, qc, process.id, group.id]);
   const [completedOutput, setCompletedOutput] = useState<Json | null>(null);
   const [viewError, setViewError] = useState<string | null>(null);
 
@@ -263,6 +283,14 @@ export function TaskView({ process, user, token, group, task, taskLabels, dossie
               }
             />
           </div>
+          {/* Human→human step progress: completed human step → intermediate
+              system steps (display only) → next human step awaiting action.
+              Shown only right after the user completed the task. */}
+          {progressFor && timeline ? (
+            <div className="w-full max-w-[800px]">
+              <HumanStepProgress timeline={timeline} completedTask={progressFor} onClose={() => setProgressFor(null)} />
+            </div>
+          ) : null}
           {rows.length > 0 ? (
             <div className="w-full max-w-[600px] overflow-hidden rounded-(--app-radius) border border-separator">
               <table className="w-full text-start">
@@ -317,6 +345,11 @@ export function TaskView({ process, user, token, group, task, taskLabels, dossie
             setIsCompleting(true);
             try {
               await complete(formData);
+              setProgressFor(String(task.description ?? ''));
+              // The timeline query stops polling once the instance is PAUSED
+              // (settled); restart it so the human→human progress strip goes
+              // live while the system steps run and the next human step opens.
+              void qc.invalidateQueries({ queryKey: ['process-timeline', process.id, group.id] });
             } catch {
               /* error surfaced via viewError */
             }

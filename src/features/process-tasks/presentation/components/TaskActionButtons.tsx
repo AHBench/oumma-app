@@ -199,7 +199,10 @@ export function TaskActionButtons(props: Props) {
         icon={<SendIcon className="h-3.5 w-3.5" />}
       />
       {/* Initial step: the confirmation is shown as a dialogue, same way as
-          the decision form */}
+          the decision form. "Proceed" (yes) is an APPROVAL — the deployed
+          designs route the initial step on the $decision field, so a bare
+          proceed (empty input) would be read as "not approved" and routed
+          down the reject branch. */}
       {showConfirmProceed ? (
         <ConfirmProceedDialog
           onClose={() => setShowConfirmProceed(false)}
@@ -207,7 +210,7 @@ export function TaskActionButtons(props: Props) {
             setShowConfirmProceed(false);
             setIsCompleting(true);
             try {
-              await onComplete();
+              await onComplete({ $decision: 'approve' });
             } catch {
               setIsCompleting(false);
             }

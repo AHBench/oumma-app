@@ -742,5 +742,8 @@
   "versionViewToolCol": "الأداة",
   "versionsViewHint": "جميع التبويبات تعرض هذه الإصدار — للقراءة فقط. أغلق للعودة إلى التصميم الحي.",
   "versionsOpenCurrent": "فتح الحالية",
-  "versionsOpenCurrentHint": "العودة إلى التصميم الحالي القابل للتحرير"
+  "versionsOpenCurrentHint": "العودة إلى التصميم الحالي القابل للتحرير",
+  "humanStepProgress": "تقدم الخطوات",
+  "systemStepTag": "نظامي",
+  "dismiss": "إغلاق"
 }

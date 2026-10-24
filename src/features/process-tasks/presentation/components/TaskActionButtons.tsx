@@ -106,6 +106,24 @@ export function TaskActionButtons(props: Props) {
     [process.initialSteps, task.description],
   );
 
+  // Design-driven initial-step decision: when the step's FORM CONFIGURATION
+  // (the process design) defines a two-option dropdown (e.g. $decision
+  // approve/reject), the proceed confirmation becomes a Yes/No decision and
+  // the chosen option is submitted with the completion. No core hardcoding —
+  // field name and option values come from the design; when the design has
+  // no such field it stays a plain proceed.
+  const initialStepId = isInitialTask
+    ? String(task.description ?? '').trim().replace(/\s+/g, '_')
+    : '';
+  const { data: initialStepForm } = useFormStructure({ process, stepId: initialStepId, token });
+  const initialDecision = useMemo(() => {
+    const f = initialStepForm?.formFields?.find(
+      (ff) => ff.fieldType === 'dropdown' && (ff.fieldOptions?.length ?? 0) === 2,
+    );
+    if (!f || !f.fieldOptions) return null;
+    return { field: '$' + f.fieldName, yes: f.fieldOptions[0], no: f.fieldOptions[1] };
+  }, [initialStepForm]);
+
   const complete = () => {
     if (isCompleting || !canComplete) return;
     if (isInitialTask) {
@@ -199,18 +217,18 @@ export function TaskActionButtons(props: Props) {
         icon={<SendIcon className="h-3.5 w-3.5" />}
       />
       {/* Initial step: the confirmation is shown as a dialogue, same way as
-          the decision form. "Proceed" (yes) is an APPROVAL — the deployed
-          designs route the initial step on the $decision field, so a bare
-          proceed (empty input) would be read as "not approved" and routed
-          down the reject branch. */}
+          the decision form. When the step's form configuration (process
+          design) defines a two-option dropdown, the dialogue is a Yes/No
+          decision — the option values are submitted with the completion. */}
       {showConfirmProceed ? (
         <ConfirmProceedDialog
           onClose={() => setShowConfirmProceed(false)}
-          onProceed={async () => {
+          decision={initialDecision}
+          onProceed={async (payload) => {
             setShowConfirmProceed(false);
             setIsCompleting(true);
             try {
-              await onComplete({ $decision: 'approve' });
+              await onComplete(payload);
             } catch {
               setIsCompleting(false);
             }
@@ -299,22 +317,46 @@ function ConfirmProceedDialog({
   onClose,
   onProceed,
   isCompleting,
+  decision,
 }: {
   onClose(): void;
-  onProceed(): Promise<void>;
+  onProceed(payload?: Record<string, unknown>): Promise<void>;
   isCompleting: boolean;
+  /** Design-driven Yes/No decision (two-option dropdown in the step's form
+   *  configuration) — null = plain proceed. */
+  decision?: { field: string; yes: string; no: string } | null;
 }) {
   const { t } = useTranslation();
   return (
     <Modal title={t('proceed')} onClose={onClose} wide>
       <div className="space-y-3">
-        <p className="text-(--app-fs-body) text-muted">{t('confirmProceed')}</p>
+        <p className="text-(--app-fs-body) text-muted">
+          {decision ? t('confirmProceedDecision') : t('confirmProceed')}
+        </p>
         <div className="flex justify-end gap-2 border-t border-separator pt-3">
-          <button onClick={onClose} className={btnCls('outline')} disabled={isCompleting}>
-            {t('cancel')}
-          </button>
-          <button onClick={() => void onProceed()} disabled={isCompleting} className={btnCls('primary')}>
-            {isCompleting ? t('completing') : t('proceed')}
+          {decision ? (
+            <button
+              onClick={() => void onProceed({ [decision.field]: decision.no })}
+              disabled={isCompleting}
+              className={btnCls('outline')}
+            >
+              {t('initialDecisionNo', { option: decision.no })}
+            </button>
+          ) : (
+            <button onClick={onClose} className={btnCls('outline')} disabled={isCompleting}>
+              {t('cancel')}
+            </button>
+          )}
+          <button
+            onClick={() => void onProceed(decision ? { [decision.field]: decision.yes } : undefined)}
+            disabled={isCompleting}
+            className={btnCls('primary')}
+          >
+            {isCompleting
+              ? t('completing')
+              : decision
+                ? t('initialDecisionYes', { option: decision.yes })
+                : t('proceed')}
           </button>
         </div>
       </div>

@@ -745,5 +745,8 @@
   "versionsOpenCurrentHint": "Return to the live, editable design",
   "humanStepProgress": "Step progress",
   "systemStepTag": "system",
-  "dismiss": "Dismiss"
+  "dismiss": "Dismiss",
+  "confirmProceedDecision": "This is the initial step — the dossier form was already submitted at launch. Confirm your decision to send it to the next step:",
+  "initialDecisionYes": "Yes — {{option}}",
+  "initialDecisionNo": "No — {{option}}"
 }

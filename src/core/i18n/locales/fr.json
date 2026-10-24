@@ -745,5 +745,8 @@
   "versionsOpenCurrentHint": "Revenir au design actif éditable",
   "humanStepProgress": "Progression des étapes",
   "systemStepTag": "système",
-  "dismiss": "Fermer"
+  "dismiss": "Fermer",
+  "confirmProceedDecision": "C'est l'étape initiale — le formulaire du dossier a déjà été soumis au lancement. Confirmez votre décision pour l'envoyer à l'étape suivante :",
+  "initialDecisionYes": "Oui — {{option}}",
+  "initialDecisionNo": "Non — {{option}}"
 }

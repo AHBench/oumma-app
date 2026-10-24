@@ -745,5 +745,8 @@
   "versionsOpenCurrentHint": "العودة إلى التصميم الحالي القابل للتحرير",
   "humanStepProgress": "تقدم الخطوات",
   "systemStepTag": "نظامي",
-  "dismiss": "إغلاق"
+  "dismiss": "إغلاق",
+  "confirmProceedDecision": "هذه الخطوة الأولية — تم إرسال استمارة الملف عند الإطلاق. أكّد قرارك لإرساله إلى الخطوة التالية:",
+  "initialDecisionYes": "نعم — {{option}}",
+  "initialDecisionNo": "لا — {{option}}"
 }

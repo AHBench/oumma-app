@@ -2,7 +2,7 @@
 title: "Oumma from Zero: Installing the Engine, the Web App and Keycloak (A Guide for Absolute Beginners)"
 series: "Building Oumma — an agentic workflow platform you can deploy yourself"
 part: 12
-tags: [tutorial, self-hosting, keycloak, docker, workflow, agentic, oumma]
+tags: [tutorial, devops, keycloak, workflow]
 reading_time: 15 min
 ---
 

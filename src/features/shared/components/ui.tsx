@@ -175,6 +175,7 @@ export function DataTable({
   selectedKey,
   emptyMessage,
   keyFn,
+  rowActions,
 }: {
   columns: { key: string; label: string; width?: string }[];
   rows: Record<string, ReactNode>[];
@@ -182,6 +183,8 @@ export function DataTable({
   selectedKey?: string;
   emptyMessage?: string;
   keyFn(row: Record<string, ReactNode>, index: number): string;
+  /** Optional per-row action cell (e.g. the "view dossier" eye button). */
+  rowActions?: (row: Record<string, ReactNode>, index: number) => ReactNode;
 }) {
   const { t } = useTranslation();
   return (
@@ -199,12 +202,13 @@ export function DataTable({
                   {c.label}
                 </th>
               ))}
+              {rowActions ? <th className="table__column w-8" aria-label="actions" /> : null}
             </tr>
           </thead>
           <tbody className="table__body">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="py-6 text-center text-(--app-fs-base) text-muted">
+                <td colSpan={columns.length + (rowActions ? 1 : 0)} className="py-6 text-center text-(--app-fs-base) text-muted">
                   {emptyMessage ?? t('noData')}
                 </td>
               </tr>
@@ -225,6 +229,11 @@ export function DataTable({
                         {row[c.key]}
                       </td>
                     ))}
+                    {rowActions ? (
+                      <td className="table__cell" onClick={(e) => e.stopPropagation()}>
+                        {rowActions(row, i)}
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })
@@ -233,5 +242,15 @@ export function DataTable({
         </table>
       </div>
     </div>
+  );
+}
+
+/** Eye icon — "view the full dossier / form structure with data". */
+export function EyeIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={className} aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
   );
 }

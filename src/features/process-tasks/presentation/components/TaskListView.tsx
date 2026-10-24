@@ -7,11 +7,13 @@ import type { TaskGroup, TaskItem } from '../../data/models/task-models';
 import type { TaskGroupLabel, TaskItemLabel } from '../../../process-page/data/models/task-group-label';
 import type { Form } from '../../../process-forms/data/models/form-model';
 import { useTaskGroups, useFormSearchItems } from '../../../shared/hooks/use-queries';
-import { ErrorBox, Spinner, AppTooltip, btnCls } from '../../../shared/components/ui';
+import { ErrorBox, Spinner, AppTooltip, EyeIcon, btnCls } from '../../../shared/components/ui';
 import { useWorkspaceContext } from '../../../process-page/presentation/hooks/use-workspace-context';
 import { TaskView } from './TaskView';
 import { findDescriptionById, tryParseJsonList } from './task-view-model';
 import { searchItemLabel } from '../../../process-forms/data/models/form-model';
+import { FullDossierDialog } from '../../../process-forms/presentation/components/DossierSearchTable';
+import { getDependencies } from '../../../../core/di';
 
 /**
  * Task list — React port of process_tasks/presentation/pages/my_tasks_page.dart:
@@ -64,6 +66,20 @@ export function TaskListView({
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [selected, setSelected] = useState<{ group: TaskGroup; task: TaskItem } | null>(null);
+  const [viewForm, setViewForm] = useState<Form | null>(null);
+
+  // Eye icon (row action): re-read the task's saved launch form (its step
+  // form structure + the instance data) and show it in the full-dossier
+  // dialog — the same dialog the other tabs' "View dossier" action uses.
+  const openDossier = async (group: TaskGroup) => {
+    const formId = String(group.taskItems.find((t) => t.taskId === 'form_id')?.description ?? '');
+    if (!formId) return;
+    try {
+      setViewForm(await getDependencies().formRepository.getFormDataStructureById(process, formId, token));
+    } catch (e) {
+      window.alert(`Failed to load dossier: ${String(e)}`);
+    }
+  };
 
   // taskItems = ALL labels flattened across the label groups — used for the
   // search filter and the clickable (urlActive) task resolution.
@@ -252,7 +268,13 @@ export function TaskListView({
             </p>
           </div>
         ) : isTableView ? (
-          <TaskTable groups={paginated} itemLabels={itemLabels} viewLabels={viewColumns} onOpen={openTask} />
+          <TaskTable
+            groups={paginated}
+            itemLabels={itemLabels}
+            viewLabels={viewColumns}
+            onOpen={openTask}
+            onViewDossier={openDossier}
+          />
         ) : (
           <TaskCards groups={paginated} itemLabels={itemLabels} onOpen={openTask} />
         )}
@@ -282,6 +304,10 @@ export function TaskListView({
           dossier={dossier ?? null}
           onClose={() => setSelected(null)}
         />
+      ) : null}
+
+      {viewForm ? (
+        <FullDossierDialog form={viewForm} process={process} user={user} token={token} onClose={() => setViewForm(null)} />
       ) : null}
     </div>
   );
@@ -458,6 +484,7 @@ function TaskTable({
   itemLabels,
   viewLabels,
   onOpen,
+  onViewDossier,
 }: {
   groups: TaskGroup[];
   /** All labels — clickable (urlActive) task resolution + search. */
@@ -465,6 +492,8 @@ function TaskTable({
   /** The table's columns — the process data's view items. */
   viewLabels: TaskItemLabel[];
   onOpen(group: TaskGroup, task: TaskItem): void;
+  /** Eye action — open the task's saved form (structure + data). */
+  onViewDossier?: (group: TaskGroup) => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -481,6 +510,7 @@ function TaskTable({
               ))}
               <th className="table__column whitespace-nowrap">{t('started')}</th>
               <th className="table__column whitespace-nowrap">{t('status')}</th>
+              {onViewDossier ? <th className="table__column w-8" aria-label="actions" /> : null}
             </tr>
           </thead>
           <tbody className="table__body">
@@ -510,6 +540,18 @@ function TaskTable({
                   <td className="table__cell">
                     <StatusIcon status={status} />
                   </td>
+                  {onViewDossier ? (
+                    <td className="table__cell" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="rounded p-1 text-muted hover:text-accent"
+                        title={t('viewDossier')}
+                        aria-label={t('viewDossier')}
+                        onClick={() => onViewDossier(group)}
+                      >
+                        <EyeIcon />
+                      </button>
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}
@@ -521,7 +563,6 @@ function TaskTable({
 }
 
 /* ---------------------------------- card view ---------------------------------- */
-
 function TaskCards({
   groups,
   itemLabels,

@@ -4,7 +4,7 @@ import type { ProcessApp } from '../../../process-apps/domain/entities/process-a
 import type { User } from '../../../auth/domain/entities/user';
 import type { Form } from '../../data/models/form-model';
 import { useDossiers, useFormVersions, useStartProcess } from '../../../shared/hooks/use-queries';
-import { DataTable, ErrorBox, Modal, SearchInput, Spinner, btnCls } from '../../../shared/components/ui';
+import { DataTable, ErrorBox, EyeIcon, Modal, SearchInput, Spinner, btnCls } from '../../../shared/components/ui';
 import { FormRenderer } from './FormFieldFactory';
 
 /**
@@ -171,6 +171,27 @@ export function DossierSearchTable(props: {
               if (f) onDossierSelected?.(f);
             }}
             emptyMessage={t('noDossiersFound')}
+            rowActions={
+              showViewDossier
+                ? (row) => {
+                    const f = (row as { __form?: Form }).__form;
+                    if (!f) return null;
+                    return (
+                      <button
+                        className="rounded p-1 text-muted hover:text-accent"
+                        title={t('viewDossier')}
+                        aria-label={t('viewDossier')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setViewDossier(f);
+                        }}
+                      >
+                        <EyeIcon />
+                      </button>
+                    );
+                  }
+                : undefined
+            }
           />
         )}
       </div>
@@ -282,7 +303,7 @@ function deepValue(obj: unknown, key: string): unknown {
  * Full dossier dialogue with version selector — port of
  * process_forms/presentation/pages/display_full_dossier.dart
  */
-function FullDossierDialog({
+export function FullDossierDialog({
   form,
   process,
   user,

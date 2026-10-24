@@ -136,6 +136,7 @@ function DossiersContent({
             groups={groups}
             forms={dossiers}
             clientSideSearch
+            showViewDossier
             // Clicking a dossier row ALWAYS selects it (its tasks only) —
             // no toggle: re-clicking the same row keeps the filter.
             onDossierSelected={(f) => setSelectedDossier(f)}

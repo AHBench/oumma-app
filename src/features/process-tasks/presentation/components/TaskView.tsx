@@ -59,9 +59,13 @@ export function TaskView({ process, user, token, group, task, taskLabels, dossie
 
   const taskName = String(task.description ?? group.name).replaceAll('_', ' ');
 
+  // View items are flattened across all labels (port of
+  // _selectedTaskGroupLabel = taskState.taskLabels.expand((g) => g.taskViewItems))
+  // — the synthesized oumma label is keyed by process id, not group name, so a
+  // find-by-group-name lookup never matched and the detail rows came up empty.
   const rawViewItems: TaskItemLabel[] = useMemo(
-    () => taskLabels.find((l) => l.id === group.name)?.taskViewItems ?? [],
-    [taskLabels, group.name],
+    () => taskLabels.flatMap((l) => l.taskViewItems),
+    [taskLabels],
   );
   // Port of _dedupViewItems: hide view items whose field name already exists
   // in the selected dossier (the dossier card already shows them).

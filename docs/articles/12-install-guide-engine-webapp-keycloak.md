@@ -40,7 +40,7 @@ Two things to know before we start:
 
 ## Part 0 — Prerequisites
 
-You need, in order of importance:
+You need:
 
 1. **A machine with Docker + Docker Compose.**
    - *Mac/Windows:* install [Docker Desktop](https://www.docker.com/products/docker-desktop/). That's it.
@@ -127,7 +127,7 @@ docker compose logs -f keycloak   # wait for "started in Xs" (≈30s first time)
 
 Open **http://localhost:8080** → *Administration Console* → log in with `admin` / `ChangeMe_Admin_102030`.
 
-If you see the console: **congratulations, the hardest infra piece is done.**
+If the console loads, Keycloak is up — that was the heaviest infra piece in this guide, so you're over the hill.
 
 ### 1.2 Create the realm (a "tenant" inside Keycloak)
 
@@ -215,7 +215,7 @@ cp .env.example .env
 nano .env
 ```
 
-You only *really* need to touch four blocks:
+You only need to touch three blocks:
 
 ```ini
 # --- 1. The LLM (head chef) ---
@@ -276,7 +276,7 @@ VITE_AUTH_BACKEND_URL=http://localhost:8095/api/auth
 VITE_USER_PROCESSES_URL=http://localhost:8095/api/user-processes
 ```
 
-> **Beginner warning #1:** if you change a `VITE_` variable, restart `npm run dev` — Vite reads these at startup, not live.
+> **Gotcha:** if you change a `VITE_` variable, restart `npm run dev` — Vite reads these at startup, not live.
 
 ### 3.3 Start it
 
@@ -287,7 +287,7 @@ npm run dev
 
 Open **http://localhost:5173** — you should see the login page. Log in with `operateur10` / `password`.
 
-If you land on the process apps list: **the full stack is working.** 🎉
+If you land on the process apps list, all three pieces are talking to each other.
 
 ---
 
@@ -298,7 +298,7 @@ If you land on the process apps list: **the full stack is working.** 🎉
 3. Complete the first task with **Yes — approve**.
 4. Log out, log in as `operateur10` again (same user is also the cashier) → a **manual review** task appears. Approve → the instance finishes.
 
-You've just executed a 4-step agentic process with 2 human steps, an HTTP validation step, and (dry-run) WhatsApp notifications. That's the whole product in 2 minutes.
+You just ran a 4-step agentic process: two human steps, an HTTP validation step, and a (dry-run) WhatsApp notification — all from a browser.
 
 ---
 
@@ -317,7 +317,7 @@ You've just executed a 4-step agentic process with 2 human steps, an HTTP valida
 | 9 | `npm run dev` says `EADDRINUSE` | Another dev server on 5173 → `npm run dev -- --port 5174` (then use 5174 everywhere in that session) |
 | 10 | Everything worked, then broke after you **changed a process in the designer** | The browser caches process config aggressively → **hard reload (Cmd/Ctrl+Shift+R) and re-login** |
 
-**The universal debug trio**, when in doubt:
+**Three commands, when in doubt:**
 
 ```bash
 docker compose ps                     # what's actually running?
@@ -341,13 +341,13 @@ Even a *test* environment should be tidy:
 
 ## What's next
 
-You now own a full agentic workflow platform on your machine. The natural next episodes:
+You now own a full agentic workflow platform on your machine. If it worked, the next episodes in the series:
 
 - **Episode 2** — design your first process in the designer (no code)
 - **Episode 3** — how roles, groups and permissions actually gate tasks
 - **Episode 5** — a full day in the life of a normal user
 - **Episode 7** — wiring real external systems (MCP-like tools)
 
-The whole series is cross-linked on Dev.to — and the engine's README has the production-oriented notes (TLS, real Postgres sizing, monitoring).
+The full series is on Dev.to. The engine's README carries the production-oriented notes (TLS, Postgres sizing, monitoring).
 
-*Found a step that fails on your machine? That's a bug report waiting to happen — the issues tab is open, beginners especially welcome. This guide is only as good as the installs it survives.*
+If a step fails on your machine, report it in the oumma repo's issues with your `docker compose logs` output — that's how this guide gets fixed.

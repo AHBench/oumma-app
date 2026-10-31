@@ -13,8 +13,8 @@ and keeps the repos getting stars while the LinkedIn posts amplify each drop.
 
 > ⚠️ Cleanup: a duplicate of #1 (id **4952671**, slug `…oumma-390i`) was accidentally published on 2026-10-25 — delete it from the Dev.to dashboard (the API DELETE endpoint 404s): https://dev.to/benchouia_ahmedabdelhaki/you-know-n8n-or-camunda-or-zapier-heres-whats-different-about-oumma-390i/edit → trash icon.
 | 2 | `02-designer-mode-order-processing.md` | 4869105 — **PUBLISHED** | `ai` `bpmn` `workflowautomation` `opensource` | "AI process designer" |
-| 3 | `03-process-anatomy-design-view.md` | 4869154 — **PUBLISHED 2026-10-25** (slug `…3dp8`; fixed two stale cross-references before publish) | `bpmn` `processdesign` `no-code` `opensource` | "BPMN tooling" |
-| 4 | `04-roles-groups-permissions.md` | 4869664 | `keycloak` `rbac` `security` `workflowautomation` | "RBAC workflow engine" |
+| 3 | `03-process-anatomy-design-view.md` | 4869154 — PUBLISHED **Oct 17** (slug `…3dp8`); was taken back to draft, re-synced + re-published 2026-10-25 with two cross-ref fixes | `bpmn` `processdesign` `no-code` `opensource` | "BPMN tooling" |
+| 4 | `04-roles-groups-permissions.md` | 4869664 — **PUBLISHED 2026-10-25** (slug `…1jhe`) | `keycloak` `rbac` `security` `workflowautomation` | "RBAC workflow engine" |
 | 5 | `05-forms-people-actually-fill.md` | 4869665 | `forms` `ux` `i18n` `workflowautomation` | "process forms i18n" |
 | 6 | `06-a-day-with-oumma-normal-user.md` | 4869666 | `workflowautomation` `ux` `taskmanagement` `opensource` | "task workflow UX" |
 | 7 | `07-the-ai-that-works-for-you.md` | 4869671 | `ai` `llm` `agenticai` `workflowautomation` | "LLM workflow agent" |
@@ -32,7 +32,9 @@ and keeps the repos getting stars while the LinkedIn posts amplify each drop.
 > (`ai workflow architecture tutorial`); after publishing each one, fix tags
 > + series in the dashboard (article edit page, 30s). Episode 01 (4894394)
 > still needs its approved tags `n8n workflowautomation zapier camunda`.
-> Also: API DELETE 404s — deletion is dashboard-only.
+> Also: API DELETE 404s — deletion is dashboard-only. And **GET by id is
+> unreliable** (404s on published articles, e.g. 4869154) — the profile HTML
+> (dev.to/<user>, all pages) is the ground truth for what's published.
 
 ## Dev.to ranking levers (per article)
 
